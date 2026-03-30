@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Board {
+  id        String     @id @default(uuid())
+  name      String
+  color     String     @default("#6366f1")
+  position  Int        @default(0)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  categories Category[]
+  tasks      Task[]
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  boardId   String
+  name      String
+  color     String   @default("#8b5cf6")
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  board Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks Task[]
+}
+
+model Task {
+  id           String    @id @default(uuid())
+  boardId      String
+  categoryId   String?
+  title        String
+  description  String?
+  status       String    @default("TODO") // TODO | IN_PROGRESS | DONE
+  priority     String    @default("MEDIUM") // LOW | MEDIUM | HIGH | URGENT
+  estimatedMin Int?
+  dueDate      DateTime?
+  position     Int       @default(0)
+  tags         String    @default("[]") // JSON array stored as string
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  board      Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  category   Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  schedules  TaskSchedule[]
+}
+
+model TaskSchedule {
+  id             String    @id @default(uuid())
+  taskId         String
+  date           String    // YYYY-MM-DD
+  startTime      String    // HH:mm
+  endTime        String    // HH:mm
+  isFixed        Boolean   @default(false)
+  isRecurring    Boolean   @default(false)
+  recurrenceRule String?   // e.g. "WEEKLY:SUN", "DAILY"
+  completedAt    DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}

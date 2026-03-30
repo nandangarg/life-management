@@ -1,0 +1,139 @@
+"use client";
+
+import { useState } from "react";
+import { TaskWithRelations } from "@/types";
+
+interface ScheduleFormProps {
+  tasks: TaskWithRelations[];
+  date: string;
+  onSubmit: (data: Record<string, unknown>) => void;
+  onClose: () => void;
+}
+
+export default function ScheduleForm({ tasks, date, onSubmit, onClose }: ScheduleFormProps) {
+  const [taskId, setTaskId] = useState("");
+  const [startTime, setStartTime] = useState("09:00");
+  const [endTime, setEndTime] = useState("10:00");
+  const [isFixed, setIsFixed] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrenceRule, setRecurrenceRule] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskId) return;
+
+    onSubmit({
+      taskId,
+      date,
+      startTime,
+      endTime,
+      isFixed,
+      isRecurring,
+      recurrenceRule: isRecurring ? recurrenceRule : null,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-semibold mb-4">Schedule Task for {date}</h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Task *</label>
+            <select
+              value={taskId}
+              onChange={(e) => setTaskId(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select a task</option>
+              {tasks.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.title}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={isFixed}
+                onChange={(e) => setIsFixed(e.target.checked)}
+                className="rounded"
+              />
+              Fixed time (immovable)
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={isRecurring}
+                onChange={(e) => setIsRecurring(e.target.checked)}
+                className="rounded"
+              />
+              Recurring
+            </label>
+          </div>
+
+          {isRecurring && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Recurrence Rule</label>
+              <select
+                value={recurrenceRule}
+                onChange={(e) => setRecurrenceRule(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select pattern</option>
+                <option value="DAILY">Daily</option>
+                <option value="WEEKLY:MON">Weekly - Monday</option>
+                <option value="WEEKLY:TUE">Weekly - Tuesday</option>
+                <option value="WEEKLY:WED">Weekly - Wednesday</option>
+                <option value="WEEKLY:THU">Weekly - Thursday</option>
+                <option value="WEEKLY:FRI">Weekly - Friday</option>
+                <option value="WEEKLY:SAT">Weekly - Saturday</option>
+                <option value="WEEKLY:SUN">Weekly - Sunday</option>
+              </select>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Schedule
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
