@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { transformTask } from "@/lib/transform";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET() {
@@ -6,13 +7,23 @@ export async function GET() {
     include: {
       categories: { orderBy: { position: "asc" } },
       tasks: {
-        include: { category: true, schedules: true },
+        include: {
+          categories: { include: { category: true }, orderBy: { category: { position: "asc" } } },
+          schedules: true,
+          actions: { orderBy: { position: "asc" } },
+        },
         orderBy: { position: "asc" },
       },
     },
     orderBy: { position: "asc" },
   });
-  return NextResponse.json(boards);
+
+  return NextResponse.json(
+    boards.map((board) => ({
+      ...board,
+      tasks: board.tasks.map(transformTask),
+    }))
+  );
 }
 
 export async function POST(request: NextRequest) {
@@ -26,5 +37,5 @@ export async function POST(request: NextRequest) {
     },
     include: { categories: true, tasks: true },
   });
-  return NextResponse.json(board, { status: 201 });
+  return NextResponse.json({ ...board, tasks: board.tasks.map(transformTask) }, { status: 201 });
 }

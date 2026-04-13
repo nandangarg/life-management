@@ -14,7 +14,7 @@ interface TaskFormProps {
 export default function TaskForm({ boardId, categories, task, onSubmit, onClose }: TaskFormProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [categoryId, setCategoryId] = useState("");
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
   const [estimatedMin, setEstimatedMin] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -23,20 +23,25 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onClose 
     if (task) {
       setTitle(task.title);
       setDescription(task.description || "");
-      setCategoryId(task.categoryId || "");
+      setCategoryIds(task.categories.map((c) => c.id));
       setPriority(task.priority as TaskPriority);
       setEstimatedMin(task.estimatedMin?.toString() || "");
       setDueDate(task.dueDate ? task.dueDate.split("T")[0] : "");
     }
   }, [task]);
 
+  function toggleCategory(id: string) {
+    setCategoryIds((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+    );
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-
     onSubmit({
       boardId,
-      categoryId: categoryId || null,
+      categoryIds,
       title: title.trim(),
       description: description.trim() || null,
       priority,
@@ -71,23 +76,31 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onClose 
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {categories.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-              <select
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">None</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Categories</label>
+              <div className="flex flex-wrap gap-2">
+                {categories.map((cat) => {
+                  const checked = categoryIds.includes(cat.id);
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => toggleCategory(cat.id)}
+                      className={`text-xs px-3 py-1 rounded-full border-2 transition-all ${
+                        checked ? "text-white border-transparent" : "bg-white border-gray-300 text-gray-600"
+                      }`}
+                      style={checked ? { backgroundColor: cat.color, borderColor: cat.color } : undefined}
+                    >
+                      {cat.name}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+          )}
 
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
               <select
@@ -96,15 +109,10 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onClose 
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {TASK_PRIORITIES.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
+                  <option key={p} value={p}>{p.charAt(0) + p.slice(1).toLowerCase()}</option>
                 ))}
               </select>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Estimated (min)</label>
               <input
@@ -115,30 +123,23 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onClose 
                 min="0"
               />
             </div>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
-            >
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">
               Cancel
             </button>
-            <button
-              type="submit"
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
+            <button type="submit" className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
               {task ? "Update" : "Create"}
             </button>
           </div>

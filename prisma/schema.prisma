@@ -12,6 +12,7 @@ model Board {
   name      String
   color     String     @default("#6366f1")
   position  Int        @default(0)
+  isHidden  Boolean    @default(false)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
@@ -28,14 +29,13 @@ model Category {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  board Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  tasks Task[]
+  board Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks TaskCategory[]
 }
 
 model Task {
   id           String    @id @default(uuid())
   boardId      String
-  categoryId   String?
   title        String
   description  String?
   status       String    @default("TODO") // TODO | IN_PROGRESS | DONE
@@ -48,8 +48,20 @@ model Task {
   updatedAt    DateTime  @updatedAt
 
   board      Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  category   Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categories TaskCategory[]
   schedules  TaskSchedule[]
+  comments   TaskComment[]
+  actions    TaskAction[]
+}
+
+model TaskCategory {
+  taskId     String
+  categoryId String
+
+  task     Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, categoryId])
 }
 
 model TaskSchedule {
@@ -65,6 +77,29 @@ model TaskSchedule {
   notes          String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model TaskAction {
+  id          String    @id @default(uuid())
+  taskId      String
+  text        String
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  position    Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }

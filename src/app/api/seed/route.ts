@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 
 export async function POST() {
   // Clear existing data
+  await prisma.taskAction.deleteMany();
+  await prisma.taskComment.deleteMany();
+  await prisma.taskCategory.deleteMany();
   await prisma.taskSchedule.deleteMany();
   await prisma.task.deleteMany();
   await prisma.category.deleteMany();
@@ -58,7 +61,6 @@ export async function POST() {
   await prisma.task.create({
     data: {
       boardId: office.id,
-      categoryId: office.categories[0].id,
       title: "Review Q2 roadmap",
       description: "Review and finalize the Q2 product roadmap",
       status: "TODO",
@@ -66,43 +68,44 @@ export async function POST() {
       estimatedMin: 60,
       dueDate: new Date("2026-04-05"),
       position: 0,
+      categories: { create: [{ categoryId: office.categories[0].id }] },
     },
   });
 
   await prisma.task.create({
     data: {
       boardId: office.id,
-      categoryId: office.categories[1].id,
       title: "Complete TypeScript course",
       status: "IN_PROGRESS",
       priority: "MEDIUM",
       estimatedMin: 120,
       position: 1,
+      categories: { create: [{ categoryId: office.categories[1].id }] },
     },
   });
 
   await prisma.task.create({
     data: {
       boardId: personal.id,
-      categoryId: personal.categories[0].id,
       title: "Morning run",
       status: "TODO",
       priority: "HIGH",
       estimatedMin: 30,
       position: 0,
+      categories: { create: [{ categoryId: personal.categories[0].id }] },
     },
   });
 
   const sundayTask = await prisma.task.create({
     data: {
       boardId: spiritual.id,
-      categoryId: spiritual.categories[1].id,
       title: "Sunday Program",
       description: "Weekly Sunday program",
       status: "TODO",
       priority: "HIGH",
       estimatedMin: 240,
       position: 0,
+      categories: { create: [{ categoryId: spiritual.categories[1].id }] },
     },
   });
 

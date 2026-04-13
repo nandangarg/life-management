@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "db:export": "npx jiti prisma/export.ts",
+    "db:import": "npx jiti prisma/import.ts",
     "db:seed": "npx jiti prisma/seed.ts",
     "db:reset": "npx prisma migrate reset --force",
     "db:studio": "npx prisma studio"

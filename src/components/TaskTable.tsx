@@ -1,0 +1,286 @@
+"use client";
+
+import { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import {
+  TaskWithRelations, Category,
+  TASK_STATUSES, TASK_PRIORITIES,
+  STATUS_LABELS, PRIORITY_COLORS,
+  TaskStatus, TaskPriority,
+} from "@/types";
+
+type SortKey = "title" | "categories" | "status" | "priority" | "dueDate" | "estimatedMin" | "actions" | "createdAt";
+type SortDir = "asc" | "desc";
+
+const PRIORITY_ORDER: Record<TaskPriority, number> = { LOW: 0, MEDIUM: 1, HIGH: 2, URGENT: 3 };
+const STATUS_ORDER: Record<TaskStatus, number> = { TODO: 0, IN_PROGRESS: 1, DONE: 2 };
+
+function compare(a: TaskWithRelations, b: TaskWithRelations, key: SortKey): number {
+  switch (key) {
+    case "priority":
+      return PRIORITY_ORDER[a.priority as TaskPriority] - PRIORITY_ORDER[b.priority as TaskPriority];
+    case "status":
+      return STATUS_ORDER[a.status as TaskStatus] - STATUS_ORDER[b.status as TaskStatus];
+    case "dueDate":
+      if (!a.dueDate && !b.dueDate) return 0;
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      return a.dueDate.localeCompare(b.dueDate);
+    case "estimatedMin":
+      return (a.estimatedMin ?? -1) - (b.estimatedMin ?? -1);
+    case "categories":
+      return (a.categories[0]?.name ?? "").localeCompare(b.categories[0]?.name ?? "");
+    case "actions": {
+      const ra = a.actions.length ? a.actions.filter(x => x.isCompleted).length / a.actions.length : -1;
+      const rb = b.actions.length ? b.actions.filter(x => x.isCompleted).length / b.actions.length : -1;
+      return ra - rb;
+    }
+    default:
+      return String(a[key as keyof TaskWithRelations] ?? "").localeCompare(String(b[key as keyof TaskWithRelations] ?? ""));
+  }
+}
+
+interface TaskTableProps {
+  tasks: TaskWithRelations[];
+  categories: Category[];
+  onAddTask?: () => void;
+}
+
+export default function TaskTable({ tasks, categories, onAddTask }: TaskTableProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [search, setSearch] = useState(() => searchParams.get("q") ?? "");
+  const [filterCategory, setFilterCategory] = useState(() => searchParams.get("cat") ?? "");
+  const [filterStatus, setFilterStatus] = useState(() => searchParams.get("status") ?? "");
+  const [filterPriority, setFilterPriority] = useState(() => searchParams.get("priority") ?? "");
+  const [focus, setFocus] = useState(() => searchParams.get("focus") === "1");
+  const [sortKey, setSortKey] = useState<SortKey>("createdAt");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  // Sync filter state to URL without adding a history entry
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set("q", search);
+    if (filterCategory) params.set("cat", filterCategory);
+    if (filterStatus) params.set("status", filterStatus);
+    if (filterPriority) params.set("priority", filterPriority);
+    if (focus) params.set("focus", "1");
+    const qs = params.toString();
+    router.replace(pathname + (qs ? "?" + qs : ""), { scroll: false });
+  }, [search, filterCategory, filterStatus, filterPriority, focus, router, pathname]);
+
+  function exitFocus() { setFocus(false); }
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return tasks.filter((t) => {
+      if (focus) {
+        return t.priority === "URGENT" && t.status !== "DONE";
+      }
+      if (q && !t.title.toLowerCase().includes(q)) return false;
+      if (filterCategory && !t.categories.some((c) => c.id === filterCategory)) return false;
+      if (filterStatus === "ACTIVE") {
+        if (t.status === "DONE") return false;
+      } else if (filterStatus && t.status !== filterStatus) return false;
+      if (filterPriority && t.priority !== filterPriority) return false;
+      return true;
+    });
+  }, [tasks, search, filterCategory, filterStatus, filterPriority, focus]);
+
+  const sorted = useMemo(() => {
+    const copy = [...filtered];
+    copy.sort((a, b) => {
+      const c = compare(a, b, sortKey);
+      return sortDir === "asc" ? c : -c;
+    });
+    return copy;
+  }, [filtered, sortKey, sortDir]);
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
+  }
+
+  const hasFilters = search || filterCategory || filterStatus || filterPriority || focus;
+
+  function Th({ col, label, className = "" }: { col: SortKey; label: string; className?: string }) {
+    const active = sortKey === col;
+    return (
+      <th
+        onClick={() => handleSort(col)}
+        className={`px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer select-none hover:bg-gray-100 whitespace-nowrap ${className}`}
+      >
+        {label}
+        <span className={`ml-1 ${active ? "text-blue-600" : "text-gray-300"}`}>
+          {active ? (sortDir === "asc" ? "↑" : "↓") : "↕"}
+        </span>
+      </th>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Filter bar */}
+      <div className="bg-white rounded-lg border border-gray-200 px-4 py-3 flex flex-wrap gap-3 items-center">
+        <button
+          onClick={() => setFocus(f => !f)}
+          className={`text-sm px-3 py-1.5 rounded-lg font-medium border transition-colors ${
+            focus
+              ? "bg-red-500 text-white border-red-500 hover:bg-red-600"
+              : "bg-white text-gray-600 border-gray-300 hover:border-red-400 hover:text-red-500"
+          }`}
+          title="Urgent + not done"
+        >
+          {focus ? "⚡ Focus" : "⚡ Focus"}
+        </button>
+
+        <input
+          type="text"
+          placeholder="Search tasks…"
+          value={search}
+          onChange={(e) => { exitFocus(); setSearch(e.target.value); }}
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-52"
+        />
+
+        {categories.length > 0 && (
+          <select
+            value={filterCategory}
+            onChange={(e) => { exitFocus(); setFilterCategory(e.target.value); }}
+            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All categories</option>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        )}
+
+        <select
+          value={filterStatus}
+          onChange={(e) => { exitFocus(); setFilterStatus(e.target.value); }}
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">All statuses</option>
+          <option value="ACTIVE">Todo</option>
+          {TASK_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+        </select>
+
+        <select
+          value={filterPriority}
+          onChange={(e) => { exitFocus(); setFilterPriority(e.target.value); }}
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">All priorities</option>
+          {TASK_PRIORITIES.map((p) => <option key={p} value={p}>{p.charAt(0) + p.slice(1).toLowerCase()}</option>)}
+        </select>
+
+        {hasFilters && (
+          <button
+            onClick={() => { setSearch(""); setFilterCategory(""); setFilterStatus(""); setFilterPriority(""); setFocus(false); }}
+            className="text-sm text-gray-400 hover:text-gray-700 underline"
+          >
+            Clear
+          </button>
+        )}
+
+        <span className="text-sm text-gray-400 ml-auto">
+          {sorted.length} of {tasks.length}
+        </span>
+
+        {onAddTask && (
+          <button
+            onClick={onAddTask}
+            className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            + Add Task
+          </button>
+        )}
+      </div>
+
+      {/* Table */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+        {sorted.length === 0 ? (
+          <div className="text-center py-16 text-gray-400">
+            {tasks.length === 0 ? "No tasks yet. Add one to get started." : "No tasks match your filters."}
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="border-b border-gray-200 bg-gray-50">
+              <tr>
+                <Th col="title" label="Title" />
+                <Th col="categories" label="Categories" />
+                <Th col="status" label="Status" />
+                <Th col="priority" label="Priority" />
+                <Th col="actions" label="Actions" />
+                <Th col="dueDate" label="Due" />
+                <Th col="estimatedMin" label="Est." />
+                <Th col="createdAt" label="Created" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {sorted.map((task) => {
+                const total = task.actions.length;
+                const done = task.actions.filter(a => a.isCompleted).length;
+                return (
+                  <tr key={task.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => window.location.href = `/tasks/${task.id}`}>
+                    <td className="px-3 py-2.5 max-w-xs" onClick={e => e.stopPropagation()}>
+                      <Link href={`/tasks/${task.id}`} className="font-medium text-gray-900 hover:text-blue-600 block truncate">
+                        {task.title}
+                      </Link>
+                      {task.description && (
+                        <div className="text-xs text-gray-400 truncate mt-0.5">{task.description}</div>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {task.categories.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {task.categories.map(c => (
+                            <span key={c.id} className="inline-block text-xs px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: c.color }}>
+                              {c.name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : <span className="text-gray-300 text-xs">—</span>}
+                    </td>
+                    <td className="px-3 py-2.5 whitespace-nowrap">
+                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                        task.status === "DONE" ? "bg-green-100 text-green-700" :
+                        task.status === "IN_PROGRESS" ? "bg-blue-100 text-blue-700" :
+                        "bg-gray-100 text-gray-600"
+                      }`}>
+                        {STATUS_LABELS[task.status as TaskStatus]}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: PRIORITY_COLORS[task.priority as TaskPriority] }} />
+                        <span className="text-gray-700 text-xs">{task.priority.charAt(0) + task.priority.slice(1).toLowerCase()}</span>
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 whitespace-nowrap text-xs">
+                      {total > 0 ? (
+                        <span className={done === total ? "text-green-600 font-medium" : "text-gray-500"}>
+                          ✓ {done}/{total}
+                        </span>
+                      ) : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-500">
+                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-500">
+                      {task.estimatedMin != null ? `${task.estimatedMin}m` : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-400">
+                      {new Date(task.createdAt).toLocaleDateString()}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}

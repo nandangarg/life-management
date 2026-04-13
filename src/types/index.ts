@@ -5,7 +5,7 @@ export const TASK_STATUSES: TaskStatus[] = ["TODO", "IN_PROGRESS", "DONE"];
 export const TASK_PRIORITIES: TaskPriority[] = ["LOW", "MEDIUM", "HIGH", "URGENT"];
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
-  TODO: "To Do",
+  TODO: "To Start",
   IN_PROGRESS: "In Progress",
   DONE: "Done",
 };
@@ -22,6 +22,7 @@ export interface Board {
   name: string;
   color: string;
   position: number;
+  isHidden: boolean;
   categories: Category[];
   tasks: TaskWithRelations[];
 }
@@ -37,7 +38,6 @@ export interface Category {
 export interface Task {
   id: string;
   boardId: string;
-  categoryId: string | null;
   title: string;
   description: string | null;
   status: TaskStatus;
@@ -63,9 +63,39 @@ export interface TaskSchedule {
   notes: string | null;
 }
 
+export interface TaskComment {
+  id: string;
+  taskId: string;
+  text: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskAction {
+  id: string;
+  taskId: string;
+  text: string;
+  isCompleted: boolean;
+  completedAt: string | null;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface TaskWithRelations extends Task {
-  category: Category | null;
+  categories: Category[];
   schedules: TaskSchedule[];
+  actions: TaskAction[];
+}
+
+export interface TaskDetail extends TaskWithRelations {
+  comments: TaskComment[];
+  board: {
+    id: string;
+    name: string;
+    color: string;
+    categories: Category[];
+  };
 }
 
 export interface ScheduleWithTask extends TaskSchedule {

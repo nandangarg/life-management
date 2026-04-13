@@ -2,15 +2,18 @@
 
 import { useState } from "react";
 import { Board, Category } from "@/types";
+import { randomDarkColor } from "@/lib/color";
 
 interface BoardManagerProps {
   boards: Board[];
   onAddBoard: (data: { name: string; color: string }) => void;
   onEditBoard: (id: string, data: { name: string; color: string }) => void;
   onDeleteBoard: (id: string) => void;
+  onToggleHidden: (id: string, isHidden: boolean) => void;
   onAddCategory: (data: { boardId: string; name: string; color: string }) => void;
   onEditCategory: (id: string, data: { name: string; color: string }) => void;
   onDeleteCategory: (id: string) => void;
+  onRandomizeCategoryColors: () => void;
 }
 
 export default function BoardManager({
@@ -18,16 +21,18 @@ export default function BoardManager({
   onAddBoard,
   onEditBoard,
   onDeleteBoard,
+  onToggleHidden,
   onAddCategory,
   onEditCategory,
   onDeleteCategory,
+  onRandomizeCategoryColors,
 }: BoardManagerProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingBoard, setEditingBoard] = useState<Board | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [addCategoryForBoard, setAddCategoryForBoard] = useState<string | null>(null);
   const [name, setName] = useState("");
-  const [color, setColor] = useState("#6366f1");
+  const [color, setColor] = useState(randomDarkColor);
 
   const resetForm = () => {
     setShowForm(false);
@@ -35,7 +40,7 @@ export default function BoardManager({
     setEditingCategory(null);
     setAddCategoryForBoard(null);
     setName("");
-    setColor("#6366f1");
+    setColor(randomDarkColor());
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -58,20 +63,35 @@ export default function BoardManager({
     <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-gray-900">Boards & Categories</h3>
-        <button
-          onClick={() => { resetForm(); setShowForm(true); }}
-          className="text-sm px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          + Board
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={onRandomizeCategoryColors}
+            className="text-sm px-3 py-1 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50"
+          >
+            Randomize Colors
+          </button>
+          <button
+            onClick={() => { resetForm(); setShowForm(true); }}
+            className="text-sm px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            + Board
+          </button>
+        </div>
       </div>
 
       <div className="space-y-3">
         {boards.map((board) => (
           <div key={board.id} className="border border-gray-100 rounded-lg p-3">
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: board.color }} />
-              <span className="font-medium text-sm">{board.name}</span>
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: board.color, opacity: board.isHidden ? 0.4 : 1 }} />
+              <span className={`font-medium text-sm ${board.isHidden ? "text-gray-400 line-through" : ""}`}>{board.name}</span>
+              {board.isHidden && <span className="text-xs text-gray-400">(hidden)</span>}
+              <button
+                onClick={() => onToggleHidden(board.id, !board.isHidden)}
+                className={`text-xs ml-auto ${board.isHidden ? "text-green-500 hover:text-green-700" : "text-gray-400 hover:text-gray-600"}`}
+              >
+                {board.isHidden ? "Show" : "Hide"}
+              </button>
               <button
                 onClick={() => {
                   resetForm();
@@ -80,7 +100,7 @@ export default function BoardManager({
                   setColor(board.color);
                   setShowForm(true);
                 }}
-                className="text-xs text-blue-500 hover:text-blue-700 ml-auto"
+                className="text-xs text-blue-500 hover:text-blue-700"
               >
                 Edit
               </button>

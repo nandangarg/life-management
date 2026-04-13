@@ -5,7 +5,7 @@ import TaskCard from "./TaskCard";
 
 interface BoardViewProps {
   board: Board;
-  onAddTask: (boardId: string) => void;
+  onAddTask: () => void;
   onEditTask: (task: TaskWithRelations) => void;
   onStatusChange: (taskId: string, status: string) => void;
   onDeleteTask: (taskId: string) => void;
@@ -27,7 +27,7 @@ export default function BoardView({ board, onAddTask, onEditTask, onStatusChange
         <h2 className="text-xl font-bold text-gray-900">{board.name}</h2>
         <span className="text-sm text-gray-500">({board.tasks.length} tasks)</span>
         <button
-          onClick={() => onAddTask(board.id)}
+          onClick={() => onAddTask()}
           className="ml-auto text-sm px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           + Add Task

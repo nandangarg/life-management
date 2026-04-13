@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { randomDarkColor } from "@/lib/color";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -16,4 +17,14 @@ export async function POST(request: NextRequest) {
     },
   });
   return NextResponse.json(category, { status: 201 });
+}
+
+export async function PATCH() {
+  const categories = await prisma.category.findMany({ select: { id: true } });
+  await Promise.all(
+    categories.map((cat) =>
+      prisma.category.update({ where: { id: cat.id }, data: { color: randomDarkColor() } })
+    )
+  );
+  return NextResponse.json({ updated: categories.length });
 }
