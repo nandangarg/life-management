@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, Suspense } from "react";
+import { useRouter } from "next/navigation";
 import { Board, TaskWithRelations, ScheduleWithTask } from "@/types";
 import TaskTable from "@/components/TaskTable";
 import BoardView from "@/components/BoardView";
@@ -19,6 +20,7 @@ function readStoredBoardId(): string {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [boards, setBoards] = useState<Board[]>([]);
   const [schedules, setSchedules] = useState<ScheduleWithTask[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>("tasks");
@@ -171,6 +173,18 @@ export default function Home() {
     setShowTaskForm(false);
     setEditingTask(null);
     fetchBoards();
+  };
+
+  const handleTaskSubmitAndEdit = async (data: Record<string, unknown>) => {
+    const res = await fetch("/api/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...data, boardId: activeBoardId }),
+    });
+    const created = await res.json();
+    setShowTaskForm(false);
+    setEditingTask(null);
+    router.push(`/tasks/${created.id}`);
   };
 
   const handleStatusChange = async (taskId: string, status: string) => {
@@ -379,6 +393,7 @@ export default function Home() {
           categories={activeBoard.categories}
           task={editingTask}
           onSubmit={handleTaskSubmit}
+          onSubmitAndEdit={handleTaskSubmitAndEdit}
           onClose={() => { setShowTaskForm(false); setEditingTask(null); }}
         />
       )}

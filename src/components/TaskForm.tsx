@@ -8,10 +8,11 @@ interface TaskFormProps {
   categories: Category[];
   task?: TaskWithRelations | null;
   onSubmit: (data: Record<string, unknown>) => void;
+  onSubmitAndEdit?: (data: Record<string, unknown>) => void;
   onClose: () => void;
 }
 
-export default function TaskForm({ boardId, categories, task, onSubmit, onClose }: TaskFormProps) {
+export default function TaskForm({ boardId, categories, task, onSubmit, onSubmitAndEdit, onClose }: TaskFormProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
@@ -36,10 +37,8 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onClose 
     );
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
-    onSubmit({
+  function buildData() {
+    return {
       boardId,
       categoryIds,
       title: title.trim(),
@@ -47,7 +46,13 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onClose 
       priority,
       estimatedMin: estimatedMin ? parseInt(estimatedMin) : null,
       dueDate: dueDate || null,
-    });
+    };
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    onSubmit(buildData());
   };
 
   return (
@@ -139,8 +144,17 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onClose 
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">
               Cancel
             </button>
+            {!task && onSubmitAndEdit && (
+              <button
+                type="button"
+                onClick={() => { if (title.trim()) onSubmitAndEdit(buildData()); }}
+                className="px-4 py-2 text-sm border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50"
+              >
+                Save & Edit
+              </button>
+            )}
             <button type="submit" className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              {task ? "Update" : "Create"}
+              {task ? "Update" : "Save"}
             </button>
           </div>
         </form>
