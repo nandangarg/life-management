@@ -70,8 +70,12 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    const updated = await res.json();
-    setTask(updated);
+    if (res.ok) {
+      const updated = await res.json();
+      setTask(updated);
+    } else {
+      router.push("/");
+    }
   }
 
   function startEditTitle() {
