@@ -23,6 +23,8 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onSubmit
   const [endTime, setEndTime] = useState("");
   const [isFixed, setIsFixed] = useState(false);
   const [isRecurring, setIsRecurring] = useState(false);
+  const [isHabit, setIsHabit] = useState(false);
+  const [habitUnit, setHabitUnit] = useState("");
 
   // Advanced Recurrence state
   const [freq, setFreq] = useState<"day" | "week" | "month" | "year">("week");
@@ -78,6 +80,8 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onSubmit
       setEndTime(task.endTime || "");
       setIsFixed(task.isFixed || false);
       setIsRecurring(task.isRecurring || false);
+      setIsHabit(task.isHabit || false);
+      setHabitUnit(task.habitUnit || "");
 
       const parsed = parseRecurrenceRule(task.recurrenceRule);
       setFreq(parsed.frequency);
@@ -122,6 +126,8 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onSubmit
       isFixed,
       isRecurring,
       recurrenceRule: recurrenceRuleStr,
+      isHabit,
+      habitUnit: isHabit && habitUnit.trim() ? habitUnit.trim() : null,
     };
   }
 
@@ -261,7 +267,30 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onSubmit
               />
               Is Recurring Routine
             </label>
+
+            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={isHabit}
+                onChange={(e) => setIsHabit(e.target.checked)}
+                className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 w-4 h-4"
+              />
+              Track as Habit
+            </label>
           </div>
+
+          {isHabit && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Habit Unit (e.g. rounds, pages, beads)</label>
+              <input
+                type="text"
+                value={habitUnit}
+                onChange={(e) => setHabitUnit(e.target.value)}
+                placeholder="rounds"
+                className={inputCls}
+              />
+            </div>
+          )}
 
           {isRecurring && (
             <div className="space-y-3 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700">

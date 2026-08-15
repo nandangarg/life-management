@@ -10,8 +10,10 @@ import TaskForm from "@/components/TaskForm";
 import CalendarView from "@/components/CalendarView";
 import ScheduleForm from "@/components/ScheduleForm";
 import PlanDayModal from "@/components/PlanDayModal";
+import HabitsView from "@/components/HabitsView";
+import LogHabitModal from "@/components/LogHabitModal";
 
-type Tab = "tasks" | "kanban" | "calendar" | "settings";
+type Tab = "tasks" | "kanban" | "calendar" | "habits" | "settings";
 
 const BOARD_KEY = "life-manager-active-board";
 
@@ -30,6 +32,7 @@ export default function Home() {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
   const [showPlanDayModal, setShowPlanDayModal] = useState(false);
+  const [loggingSchedule, setLoggingSchedule] = useState<ScheduleWithTask | null>(null);
   const [editingTask, setEditingTask] = useState<TaskWithRelations | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDark, setIsDark] = useState(false);
@@ -229,11 +232,91 @@ export default function Home() {
   };
 
   const handleMarkComplete = async (scheduleId: string) => {
+    const schedule = schedules.find((s) => s.id === scheduleId);
+    
+    // If it's a habit, open logging modal
+    if (schedule && schedule.task.isHabit) {
+      setLoggingSchedule(schedule);
+      return;
+    }
+
+    // If it's a non-habit virtual schedule, save as complete
+    if (scheduleId.startsWith("virtual_")) {
+      const vSchedule = schedules.find((s) => s.id === scheduleId);
+      if (vSchedule) {
+        await fetch("/api/schedules", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            taskId: vSchedule.taskId,
+            date: calendarDate,
+            startTime: vSchedule.startTime,
+            endTime: vSchedule.endTime,
+            isFixed: vSchedule.isFixed,
+            isRecurring: true,
+            recurrenceRule: vSchedule.recurrenceRule,
+            completedAt: new Date().toISOString(),
+          }),
+        });
+        fetchSchedules();
+      }
+      return;
+    }
+
+    // Default task schedule checkoff
     await fetch(`/api/schedules/${scheduleId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ completedAt: new Date().toISOString() }),
     });
+    fetchSchedules();
+  };
+
+  const handleHabitLogSubmit = async (data: {
+    actualStartTime: string;
+    actualEndTime: string;
+    actualMin: number;
+    metricValue: number | null;
+    notes: string;
+  }) => {
+    if (!loggingSchedule) return;
+
+    if (loggingSchedule.id.startsWith("virtual_")) {
+      await fetch("/api/schedules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          taskId: loggingSchedule.taskId,
+          date: calendarDate,
+          startTime: loggingSchedule.startTime,
+          endTime: loggingSchedule.endTime,
+          isFixed: loggingSchedule.isFixed,
+          isRecurring: true,
+          recurrenceRule: loggingSchedule.recurrenceRule,
+          completedAt: new Date().toISOString(),
+          actualStartTime: data.actualStartTime,
+          actualEndTime: data.actualEndTime,
+          actualMin: data.actualMin,
+          metricValue: data.metricValue,
+          notes: data.notes,
+        }),
+      });
+    } else {
+      await fetch(`/api/schedules/${loggingSchedule.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          completedAt: new Date().toISOString(),
+          actualStartTime: data.actualStartTime,
+          actualEndTime: data.actualEndTime,
+          actualMin: data.actualMin,
+          metricValue: data.metricValue,
+          notes: data.notes,
+        }),
+      });
+    }
+
+    setLoggingSchedule(null);
     fetchSchedules();
   };
 
@@ -299,6 +382,7 @@ export default function Home() {
     tasks: "Tasks",
     kanban: "Kanban",
     calendar: "Calendar",
+    habits: "Habits",
     settings: "Settings",
   };
 
@@ -330,7 +414,7 @@ export default function Home() {
 
           {/* Tab nav */}
           <nav className="flex gap-1 ml-auto">
-            {(["tasks", "kanban", "calendar", "settings"] as Tab[]).map(tab => (
+            {(["tasks", "kanban", "calendar", "habits", "settings"] as Tab[]).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -400,6 +484,11 @@ export default function Home() {
             onMarkComplete={handleMarkComplete}
             onDeleteSchedule={handleDeleteSchedule}
           />
+        )}
+
+        {/* Habits tab */}
+        {activeTab === "habits" && (
+          <HabitsView boards={boards} />
         )}
 
         {/* Settings tab */}
@@ -480,6 +569,15 @@ export default function Home() {
           existingSchedules={schedules}
           onSubmit={handlePlanDaySubmit}
           onClose={() => setShowPlanDayModal(false)}
+        />
+      )}
+
+      {/* ── Log Habit Completion modal ─────────────────────────────────────── */}
+      {loggingSchedule && (
+        <LogHabitModal
+          schedule={loggingSchedule}
+          onSubmit={handleHabitLogSubmit}
+          onClose={() => setLoggingSchedule(null)}
         />
       )}
     </div>

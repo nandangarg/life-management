@@ -137,6 +137,10 @@ export async function GET(request: NextRequest) {
           completedAt: null,
           notes: null,
           isCancelled: false,
+          actualStartTime: null,
+          actualEndTime: null,
+          actualMin: null,
+          metricValue: null,
           createdAt: new Date(),
           updatedAt: new Date(),
           task: transformTask(task)
@@ -162,6 +166,11 @@ export async function POST(request: NextRequest) {
       isRecurring: body.isRecurring || false,
       recurrenceRule: body.recurrenceRule || null,
       notes: body.notes || null,
+      completedAt: body.completedAt ? new Date(body.completedAt) : null,
+      actualStartTime: body.actualStartTime || null,
+      actualEndTime: body.actualEndTime || null,
+      actualMin: body.actualMin !== undefined ? parseInt(body.actualMin) : null,
+      metricValue: body.metricValue !== undefined ? parseFloat(body.metricValue) : null,
     },
     include: { task: { include: taskInclude } },
   });

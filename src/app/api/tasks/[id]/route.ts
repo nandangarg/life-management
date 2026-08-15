@@ -44,6 +44,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (body.isFixed !== undefined) data.isFixed = body.isFixed;
   if (body.isRecurring !== undefined) data.isRecurring = body.isRecurring;
   if (body.recurrenceRule !== undefined) data.recurrenceRule = body.recurrenceRule;
+  if (body.isHabit !== undefined) data.isHabit = body.isHabit;
+  if (body.habitUnit !== undefined) data.habitUnit = body.habitUnit;
 
   // Handle many-to-many category update: replace all existing entries
   if (body.categoryIds !== undefined) {

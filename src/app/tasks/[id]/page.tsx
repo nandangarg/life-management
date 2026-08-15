@@ -753,6 +753,32 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                 )}
               </div>
 
+              {/* Track as Habit */}
+              <div className="space-y-3 pt-1">
+                <label className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={task.isHabit}
+                    onChange={(e) => patchTask({ isHabit: e.target.checked })}
+                    className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                  />
+                  Track as Habit
+                </label>
+
+                {task.isHabit && (
+                  <div>
+                    <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Habit Unit</label>
+                    <input
+                      type="text"
+                      defaultValue={task.habitUnit || ""}
+                      onBlur={(e) => patchTask({ habitUnit: e.target.value.trim() || null })}
+                      placeholder="e.g. rounds"
+                      className={sidebarInputCls}
+                    />
+                  </div>
+                )}
+              </div>
+
               {/* Estimated */}
               <div>
                 <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Estimated (min)</label>

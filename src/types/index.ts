@@ -51,6 +51,8 @@ export interface Task {
   isFixed: boolean;
   isRecurring: boolean;
   recurrenceRule: string | null;
+  isHabit: boolean;
+  habitUnit: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -67,6 +69,10 @@ export interface TaskSchedule {
   completedAt: string | null;
   notes: string | null;
   isCancelled: boolean;
+  actualStartTime: string | null;
+  actualEndTime: string | null;
+  actualMin: number | null;
+  metricValue: number | null;
 }
 
 export interface TaskComment {

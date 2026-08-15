@@ -27,6 +27,8 @@ export async function POST(request: NextRequest) {
       isFixed: body.isFixed || false,
       isRecurring: body.isRecurring || false,
       recurrenceRule: body.recurrenceRule || null,
+      isHabit: body.isHabit || false,
+      habitUnit: body.habitUnit || null,
       categories: {
         create: categoryIds.map((categoryId) => ({ categoryId })),
       },

@@ -49,6 +49,8 @@ model Task {
   isFixed        Boolean   @default(false)
   isRecurring    Boolean   @default(false)
   recurrenceRule String?   // e.g. "DAILY", "WEEKLY:MON", etc.
+  isHabit        Boolean   @default(false)
+  habitUnit      String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -81,6 +83,10 @@ model TaskSchedule {
   completedAt    DateTime?
   notes          String?
   isCancelled    Boolean   @default(false)
+  actualStartTime String?
+  actualEndTime   String?
+  actualMin       Int?
+  metricValue     Float?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
