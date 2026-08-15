@@ -9,6 +9,7 @@ import BoardManager from "@/components/BoardManager";
 import TaskForm from "@/components/TaskForm";
 import CalendarView from "@/components/CalendarView";
 import ScheduleForm from "@/components/ScheduleForm";
+import PlanDayModal from "@/components/PlanDayModal";
 
 type Tab = "tasks" | "kanban" | "calendar" | "settings";
 
@@ -28,8 +29,21 @@ export default function Home() {
   const [calendarDate, setCalendarDate] = useState(new Date().toISOString().split("T")[0]);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [showPlanDayModal, setShowPlanDayModal] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskWithRelations | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    setIsDark(localStorage.getItem("theme") === "dark");
+  }, []);
+
+  function toggleTheme() {
+    const next = !isDark;
+    setIsDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+  }
 
   // ── Data fetching ──────────────────────────────────────────────────────────
 
@@ -224,7 +238,35 @@ export default function Home() {
   };
 
   const handleDeleteSchedule = async (scheduleId: string) => {
-    await fetch(`/api/schedules/${scheduleId}`, { method: "DELETE" });
+    if (scheduleId.startsWith("virtual_")) {
+      const taskId = scheduleId.replace("virtual_", "");
+      await fetch("/api/schedules/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId, date: calendarDate }),
+      });
+    } else {
+      await fetch(`/api/schedules/${scheduleId}`, { method: "DELETE" });
+    }
+    fetchSchedules();
+  };
+
+  const handlePlanDaySubmit = async (schedulesToCreate: Array<{ taskId: string; startTime: string; endTime: string }>) => {
+    await Promise.all(
+      schedulesToCreate.map((s) =>
+        fetch("/api/schedules", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            taskId: s.taskId,
+            date: calendarDate,
+            startTime: s.startTime,
+            endTime: s.endTime,
+          }),
+        })
+      )
+    );
+    setShowPlanDayModal(false);
     fetchSchedules();
   };
 
@@ -247,8 +289,8 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-500">Loading…</div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
+        <div className="text-gray-500 dark:text-gray-400">Loading…</div>
       </div>
     );
   }
@@ -261,15 +303,15 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
-          <h1 className="text-xl font-bold text-gray-900 shrink-0">Life Manager</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 shrink-0">Life Manager</h1>
 
           {/* Board selector */}
           {visibleBoards.length > 0 && (
-            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
+            <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5">
               <span
                 className="w-2.5 h-2.5 rounded-full shrink-0"
                 style={{ backgroundColor: activeBoard?.color ?? "#6366f1" }}
@@ -277,7 +319,7 @@ export default function Home() {
               <select
                 value={activeBoardId}
                 onChange={(e) => handleBoardChange(e.target.value)}
-                className="bg-transparent text-sm font-medium text-gray-800 focus:outline-none cursor-pointer pr-1"
+                className="bg-transparent text-sm font-medium text-gray-800 dark:text-gray-200 focus:outline-none cursor-pointer pr-1"
               >
                 {visibleBoards.map(b => (
                   <option key={b.id} value={b.id}>{b.name}</option>
@@ -295,7 +337,7 @@ export default function Home() {
                 className={`px-4 py-2 text-sm rounded-lg ${
                   activeTab === tab
                     ? "bg-blue-600 text-white"
-                    : "text-gray-600 hover:bg-gray-100"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                 }`}
               >
                 {TAB_LABELS[tab]}
@@ -313,7 +355,7 @@ export default function Home() {
           <>
             {!activeBoard ? (
               <div className="text-center py-16">
-                <p className="text-gray-500 mb-4">No boards yet. Create one in Settings or load sample data.</p>
+                <p className="text-gray-500 dark:text-gray-400 mb-4">No boards yet. Create one in Settings or load sample data.</p>
                 <button onClick={handleSeed} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
                   Load Sample Data
                 </button>
@@ -334,7 +376,7 @@ export default function Home() {
         {activeTab === "kanban" && (
           <>
             {!activeBoard ? (
-              <div className="text-center py-16 text-gray-400">Select a board to view its kanban.</div>
+              <div className="text-center py-16 text-gray-400 dark:text-gray-500">Select a board to view its kanban.</div>
             ) : (
               <BoardView
                 board={activeBoard}
@@ -354,6 +396,7 @@ export default function Home() {
             schedules={schedules}
             onDateChange={setCalendarDate}
             onAddSchedule={() => setShowScheduleForm(true)}
+            onPlanDay={() => setShowPlanDayModal(true)}
             onMarkComplete={handleMarkComplete}
             onDeleteSchedule={handleDeleteSchedule}
           />
@@ -373,8 +416,29 @@ export default function Home() {
               onDeleteCategory={handleDeleteCategory}
               onRandomizeCategoryColors={handleRandomizeCategoryColors}
             />
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">Data</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Appearance</h3>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-700 dark:text-gray-300">Dark mode</span>
+                <button
+                  onClick={toggleTheme}
+                  role="switch"
+                  aria-checked={isDark}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                    isDark ? "bg-blue-600" : "bg-gray-200 dark:bg-gray-600"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      isDark ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+                <span className="text-sm text-gray-500 dark:text-gray-400">{isDark ? "On" : "Off"}</span>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Data</h3>
               <button
                 onClick={handleSeed}
                 className="text-sm px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
@@ -405,6 +469,17 @@ export default function Home() {
           date={calendarDate}
           onSubmit={handleScheduleSubmit}
           onClose={() => setShowScheduleForm(false)}
+        />
+      )}
+
+      {/* ── Plan Day form modal ─────────────────────────────────────────────── */}
+      {showPlanDayModal && (
+        <PlanDayModal
+          date={calendarDate}
+          boards={boards}
+          existingSchedules={schedules}
+          onSubmit={handlePlanDaySubmit}
+          onClose={() => setShowPlanDayModal(false)}
         />
       )}
     </div>

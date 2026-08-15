@@ -7,6 +7,7 @@ interface CalendarViewProps {
   schedules: ScheduleWithTask[];
   onDateChange: (date: string) => void;
   onAddSchedule: () => void;
+  onPlanDay: () => void;
   onMarkComplete: (scheduleId: string) => void;
   onDeleteSchedule: (scheduleId: string) => void;
 }
@@ -18,6 +19,7 @@ export default function CalendarView({
   schedules,
   onDateChange,
   onAddSchedule,
+  onPlanDay,
   onMarkComplete,
   onDeleteSchedule,
 }: CalendarViewProps) {
@@ -59,46 +61,51 @@ export default function CalendarView({
     year: "numeric",
   });
 
-  // Track rendered schedules to avoid duplicates
   const rendered = new Set<string>();
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <button onClick={prevDay} className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm">
+          <button onClick={prevDay} className="px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm">
             ← Prev
           </button>
           <div className="text-center">
-            <div className="text-lg font-bold text-gray-900">{dayName}</div>
-            <div className="text-sm text-gray-500">{formattedDate}</div>
+            <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{dayName}</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">{formattedDate}</div>
           </div>
-          <button onClick={nextDay} className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm">
+          <button onClick={nextDay} className="px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm">
             Next →
           </button>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => onDateChange(new Date().toISOString().split("T")[0])}
-            className="text-sm px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg"
+            className="text-sm px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg"
           >
             Today
           </button>
           <button
+            onClick={onPlanDay}
+            className="text-sm px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+          >
+            Plan Day
+          </button>
+          <button
             onClick={onAddSchedule}
-            className="text-sm px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="text-sm px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
           >
             + Schedule
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         {HOURS.map((hour) => {
           const hourSchedules = getScheduleForHour(hour);
           return (
-            <div key={hour} className="flex border-b border-gray-100 min-h-[48px]">
-              <div className="w-16 shrink-0 text-xs text-gray-400 p-2 text-right border-r border-gray-100">
+            <div key={hour} className="flex border-b border-gray-100 dark:border-gray-700 min-h-[48px]">
+              <div className="w-16 shrink-0 text-xs text-gray-400 dark:text-gray-500 p-2 text-right border-r border-gray-100 dark:border-gray-700">
                 {hour.toString().padStart(2, "0")}:00
               </div>
               <div className="flex-1 p-1 flex gap-1">

@@ -16,11 +16,11 @@ export default function TaskCard({ task, onEdit, onStatusChange, onDelete }: Tas
   const completedActions = task.actions.filter((a) => a.isCompleted).length;
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 mb-2 hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-gray-700 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 p-3 mb-2 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-2">
         <Link
           href={`/tasks/${task.id}`}
-          className="text-sm font-medium text-gray-900 flex-1 hover:text-blue-600"
+          className="text-sm font-medium text-gray-900 dark:text-gray-100 flex-1 hover:text-blue-600 dark:hover:text-blue-400"
           onClick={(e) => e.stopPropagation()}
         >
           {task.title}
@@ -46,9 +46,9 @@ export default function TaskCard({ task, onEdit, onStatusChange, onDelete }: Tas
         </div>
       )}
 
-      <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+      <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
         {totalActions > 0 && (
-          <span className={completedActions === totalActions ? "text-green-600 font-medium" : ""}>
+          <span className={completedActions === totalActions ? "text-green-600 dark:text-green-400 font-medium" : ""}>
             ✓ {completedActions}/{totalActions}
           </span>
         )}
@@ -60,7 +60,7 @@ export default function TaskCard({ task, onEdit, onStatusChange, onDelete }: Tas
         {task.status !== "TODO" && (
           <button
             onClick={() => onStatusChange(task.id, task.status === "DONE" ? "IN_PROGRESS" : "TODO")}
-            className="text-xs px-2 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600"
+            className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 text-gray-600 dark:text-gray-300"
           >
             ←
           </button>
@@ -68,20 +68,20 @@ export default function TaskCard({ task, onEdit, onStatusChange, onDelete }: Tas
         {task.status !== "DONE" && (
           <button
             onClick={() => onStatusChange(task.id, task.status === "TODO" ? "IN_PROGRESS" : "DONE")}
-            className="text-xs px-2 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600"
+            className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 text-gray-600 dark:text-gray-300"
           >
             →
           </button>
         )}
         <button
           onClick={() => onEdit(task)}
-          className="text-xs px-2 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-500"
+          className="text-xs px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-500"
         >
           Edit
         </button>
         <button
           onClick={() => onDelete(task.id)}
-          className="text-xs px-2 py-0.5 rounded bg-red-50 hover:bg-red-100 text-red-500 ml-auto"
+          className="text-xs px-2 py-0.5 rounded bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-500 ml-auto"
         >
           ✕
         </button>

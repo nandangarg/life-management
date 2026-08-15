@@ -60,13 +60,13 @@ export default function BoardManager({
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-gray-900">Boards & Categories</h3>
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100">Boards & Categories</h3>
         <div className="flex gap-2">
           <button
             onClick={onRandomizeCategoryColors}
-            className="text-sm px-3 py-1 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50"
+            className="text-sm px-3 py-1 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Randomize Colors
           </button>
@@ -81,14 +81,14 @@ export default function BoardManager({
 
       <div className="space-y-3">
         {boards.map((board) => (
-          <div key={board.id} className="border border-gray-100 rounded-lg p-3">
+          <div key={board.id} className="border border-gray-100 dark:border-gray-700 rounded-lg p-3">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: board.color, opacity: board.isHidden ? 0.4 : 1 }} />
-              <span className={`font-medium text-sm ${board.isHidden ? "text-gray-400 line-through" : ""}`}>{board.name}</span>
-              {board.isHidden && <span className="text-xs text-gray-400">(hidden)</span>}
+              <span className={`font-medium text-sm ${board.isHidden ? "text-gray-400 dark:text-gray-500 line-through" : "text-gray-900 dark:text-gray-100"}`}>{board.name}</span>
+              {board.isHidden && <span className="text-xs text-gray-400 dark:text-gray-500">(hidden)</span>}
               <button
                 onClick={() => onToggleHidden(board.id, !board.isHidden)}
-                className={`text-xs ml-auto ${board.isHidden ? "text-green-500 hover:text-green-700" : "text-gray-400 hover:text-gray-600"}`}
+                className={`text-xs ml-auto ${board.isHidden ? "text-green-500 hover:text-green-700" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"}`}
               >
                 {board.isHidden ? "Show" : "Hide"}
               </button>
@@ -145,7 +145,7 @@ export default function BoardManager({
                   setAddCategoryForBoard(board.id);
                   setShowForm(true);
                 }}
-                className="text-xs text-gray-400 hover:text-gray-600 px-2 py-0.5 border border-dashed border-gray-300 rounded-full"
+                className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 px-2 py-0.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-full"
               >
                 + Category
               </button>
@@ -155,13 +155,13 @@ export default function BoardManager({
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="mt-3 flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+        <form onSubmit={handleSubmit} className="mt-3 flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={addCategoryForBoard || editingCategory ? "Category name" : "Board name"}
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             autoFocus
           />
           <input
@@ -173,7 +173,7 @@ export default function BoardManager({
           <button type="submit" className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
             {editingBoard || editingCategory ? "Update" : "Add"}
           </button>
-          <button type="button" onClick={resetForm} className="text-sm px-3 py-1.5 text-gray-500 hover:bg-gray-200 rounded-lg">
+          <button type="button" onClick={resetForm} className="text-sm px-3 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg">
             Cancel
           </button>
         </form>

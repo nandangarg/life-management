@@ -14,11 +14,15 @@ const taskInclude = {
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const task = await prisma.task.findUniqueOrThrow({
-    where: { id },
-    include: taskInclude,
-  });
-  return NextResponse.json(transformTask(task));
+  try {
+    const task = await prisma.task.findUniqueOrThrow({
+      where: { id },
+      include: taskInclude,
+    });
+    return NextResponse.json(transformTask(task));
+  } catch (error) {
+    return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  }
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -35,6 +39,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (body.position !== undefined) data.position = body.position;
   if (body.boardId !== undefined) data.boardId = body.boardId;
   if (body.tags !== undefined) data.tags = body.tags;
+  if (body.startTime !== undefined) data.startTime = body.startTime;
+  if (body.endTime !== undefined) data.endTime = body.endTime;
+  if (body.isRecurring !== undefined) data.isRecurring = body.isRecurring;
+  if (body.recurrenceRule !== undefined) data.recurrenceRule = body.recurrenceRule;
 
   // Handle many-to-many category update: replace all existing entries
   if (body.categoryIds !== undefined) {
@@ -47,17 +55,24 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
   }
 
-  const task = await prisma.task.update({
-    where: { id },
-    data,
-    include: taskInclude,
-  });
-
-  return NextResponse.json(transformTask(task));
+  try {
+    const task = await prisma.task.update({
+      where: { id },
+      data,
+      include: taskInclude,
+    });
+    return NextResponse.json(transformTask(task));
+  } catch (error) {
+    return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  }
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  await prisma.task.delete({ where: { id } });
-  return NextResponse.json({ success: true });
+  try {
+    await prisma.task.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  }
 }

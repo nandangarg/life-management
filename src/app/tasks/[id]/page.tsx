@@ -15,13 +15,11 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
   const [task, setTask] = useState<TaskDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Inline edit state
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const [editingDesc, setEditingDesc] = useState(false);
   const [descDraft, setDescDraft] = useState("");
 
-  // New action / comment
   const [newActionText, setNewActionText] = useState("");
   const [editingActionId, setEditingActionId] = useState<string | null>(null);
   const [editingActionText, setEditingActionText] = useState("");
@@ -38,11 +36,20 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
   }, [params]);
 
   const fetchTask = useCallback(async (id: string) => {
-    const res = await fetch(`/api/tasks/${id}`);
-    const data = await res.json();
-    setTask(data);
-    setLoading(false);
-  }, []);
+    try {
+      const res = await fetch(`/api/tasks/${id}`);
+      if (!res.ok) {
+        throw new Error(`Failed to fetch task: status ${res.status}`);
+      }
+      const data = await res.json();
+      setTask(data);
+    } catch (err) {
+      console.error(err);
+      router.push("/");
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
 
   useEffect(() => {
     if (taskId) fetchTask(taskId);
@@ -67,7 +74,6 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
     setTask(updated);
   }
 
-  // ── Title ──────────────────────────────────────────────────────────────────
   function startEditTitle() {
     setTitleDraft(task!.title);
     setEditingTitle(true);
@@ -78,7 +84,6 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
     setEditingTitle(false);
   }
 
-  // ── Description ────────────────────────────────────────────────────────────
   function startEditDesc() {
     setDescDraft(task!.description || "");
     setEditingDesc(true);
@@ -88,7 +93,6 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
     setEditingDesc(false);
   }
 
-  // ── Actions ────────────────────────────────────────────────────────────────
   async function addAction() {
     if (!newActionText.trim() || !taskId) return;
     setSubmitting(true);
@@ -151,7 +155,6 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
     fetchTask(taskId);
   }
 
-  // ── Comments ───────────────────────────────────────────────────────────────
   async function addComment() {
     if (!newCommentText.trim() || !taskId) return;
     setSubmitting(true);
@@ -182,10 +185,26 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
     fetchTask(taskId);
   }
 
+  async function deleteTask() {
+    if (!taskId) return;
+    if (!confirm("Are you sure you want to delete this task? This action cannot be undone.")) return;
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
+      if (res.ok) {
+        router.push("/");
+      } else {
+        alert("Failed to delete task.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("An error occurred while deleting the task.");
+    }
+  }
+
   if (loading || !task) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-500">Loading...</div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
+        <div className="text-gray-500 dark:text-gray-400">Loading...</div>
       </div>
     );
   }
@@ -194,24 +213,34 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
   const completedActions = sortedActions.filter((a) => a.isCompleted).length;
   const isAutoComment = (text: string) => text.startsWith("✓ Completed action:");
 
+  const sidebarInputCls = "w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500";
+
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3 text-sm text-gray-500">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center gap-1 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 shrink-0"
+            >
+              ← Back
+            </button>
+            <span className="text-gray-300 dark:text-gray-600">|</span>
+            <Link href="/" className="hover:text-gray-800 dark:hover:text-gray-100 inline-flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: task.board.color }} />
+              {task.board.name}
+            </Link>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium truncate max-w-xs">{task.title}</span>
+          </div>
           <button
-            onClick={() => router.back()}
-            className="flex items-center gap-1 text-gray-400 hover:text-gray-700 shrink-0"
+            onClick={deleteTask}
+            className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-500 hover:text-red-600 font-medium transition-colors cursor-pointer"
           >
-            ← Back
+            🗑 Delete Task
           </button>
-          <span className="text-gray-300">|</span>
-          <Link href="/" className="hover:text-gray-800 inline-flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: task.board.color }} />
-            {task.board.name}
-          </Link>
-          <span>/</span>
-          <span className="text-gray-900 font-medium truncate max-w-xs">{task.title}</span>
         </div>
       </header>
 
@@ -222,7 +251,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
           <div className="flex-1 min-w-0 space-y-4">
 
             {/* Title */}
-            <div className="bg-white rounded-lg border border-gray-200 p-5">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
               {editingTitle ? (
                 <div className="flex gap-2 items-center">
                   <input
@@ -230,17 +259,17 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                     value={titleDraft}
                     onChange={(e) => setTitleDraft(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") setEditingTitle(false); }}
-                    className="flex-1 text-xl font-bold border border-blue-300 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 text-xl font-bold border border-blue-300 dark:border-blue-500 rounded-lg px-3 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <button onClick={saveTitle} className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
-                  <button onClick={() => setEditingTitle(false)} className="text-sm px-3 py-1.5 text-gray-500 hover:bg-gray-100 rounded-lg">Cancel</button>
+                  <button onClick={() => setEditingTitle(false)} className="text-sm px-3 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
                 </div>
               ) : (
                 <div className="flex items-start gap-2 group">
-                  <h1 className="text-xl font-bold text-gray-900 flex-1">{task.title}</h1>
+                  <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex-1">{task.title}</h1>
                   <button
                     onClick={startEditTitle}
-                    className="opacity-0 group-hover:opacity-100 text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded"
+                    className="opacity-0 group-hover:opacity-100 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 px-2 py-1 rounded"
                   >
                     ✎
                   </button>
@@ -249,11 +278,11 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
             </div>
 
             {/* Description */}
-            <div className="bg-white rounded-lg border border-gray-200 p-5">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Description</h2>
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Description</h2>
                 {!editingDesc && (
-                  <button onClick={startEditDesc} className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded">
+                  <button onClick={startEditDesc} className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 px-2 py-1 rounded">
                     ✎
                   </button>
                 )}
@@ -265,30 +294,30 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                     value={descDraft}
                     onChange={(e) => setDescDraft(e.target.value)}
                     rows={5}
-                    className="w-full border border-blue-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-blue-300 dark:border-blue-500 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <div className="flex gap-2">
                     <button onClick={saveDesc} className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
-                    <button onClick={() => setEditingDesc(false)} className="text-sm px-3 py-1.5 text-gray-500 hover:bg-gray-100 rounded-lg">Cancel</button>
+                    <button onClick={() => setEditingDesc(false)} className="text-sm px-3 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
                   </div>
                 </div>
               ) : (
                 <p
                   onClick={startEditDesc}
-                  className="text-sm text-gray-600 whitespace-pre-wrap cursor-pointer hover:bg-gray-50 rounded p-1 -m-1 min-h-[2rem]"
+                  className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded p-1 -m-1 min-h-[2rem]"
                 >
-                  {task.description || <span className="text-gray-400 italic">Add a description…</span>}
+                  {task.description || <span className="text-gray-400 dark:text-gray-500 italic">Add a description…</span>}
                 </p>
               )}
             </div>
 
             {/* Actions */}
-            <div className="bg-white rounded-lg border border-gray-200 p-5">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
                   Actions
                   {sortedActions.length > 0 && (
-                    <span className="ml-2 font-normal text-gray-400">
+                    <span className="ml-2 font-normal text-gray-400 dark:text-gray-500">
                       {completedActions}/{sortedActions.length} completed
                     </span>
                   )}
@@ -298,16 +327,16 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
               {sortedActions.length > 0 && (
                 <table className="w-full text-sm mb-4">
                   <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left py-1.5 pr-2 text-xs font-medium text-gray-400 w-6"></th>
-                      <th className="text-left py-1.5 text-xs font-medium text-gray-400">Action</th>
-                      <th className="text-left py-1.5 px-3 text-xs font-medium text-gray-400 whitespace-nowrap">Completed at</th>
-                      <th className="py-1.5 text-xs font-medium text-gray-400 w-20"></th>
+                    <tr className="border-b border-gray-100 dark:border-gray-700">
+                      <th className="text-left py-1.5 pr-2 text-xs font-medium text-gray-400 dark:text-gray-500 w-6"></th>
+                      <th className="text-left py-1.5 text-xs font-medium text-gray-400 dark:text-gray-500">Action</th>
+                      <th className="text-left py-1.5 px-3 text-xs font-medium text-gray-400 dark:text-gray-500 whitespace-nowrap">Completed at</th>
+                      <th className="py-1.5 text-xs font-medium text-gray-400 dark:text-gray-500 w-20"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
                     {sortedActions.map((action, idx) => (
-                      <tr key={action.id} className="group hover:bg-gray-50">
+                      <tr key={action.id} className="group hover:bg-gray-50 dark:hover:bg-gray-700">
                         <td className="py-2 pr-2">
                           <input
                             type="checkbox"
@@ -323,15 +352,15 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                                 value={editingActionText}
                                 onChange={(e) => setEditingActionText(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === "Enter") saveActionEdit(action); if (e.key === "Escape") setEditingActionId(null); }}
-                                className="flex-1 border border-blue-300 rounded px-2 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="flex-1 border border-blue-300 dark:border-blue-500 rounded px-2 py-0.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 autoFocus
                               />
                               <button onClick={() => saveActionEdit(action)} className="text-xs text-blue-600 hover:text-blue-800">Save</button>
-                              <button onClick={() => setEditingActionId(null)} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+                              <button onClick={() => setEditingActionId(null)} className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">✕</button>
                             </div>
                           ) : (
                             <span
-                              className={`cursor-pointer ${action.isCompleted ? "line-through text-gray-400" : "text-gray-800"}`}
+                              className={`cursor-pointer ${action.isCompleted ? "line-through text-gray-400 dark:text-gray-500" : "text-gray-800 dark:text-gray-200"}`}
                               onDoubleClick={() => { setEditingActionId(action.id); setEditingActionText(action.text); }}
                               title="Double-click to edit"
                             >
@@ -339,7 +368,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                             </span>
                           )}
                         </td>
-                        <td className="py-2 px-3 text-xs text-gray-400 whitespace-nowrap">
+                        <td className="py-2 px-3 text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
                           {action.completedAt
                             ? new Date(action.completedAt).toLocaleString()
                             : "—"}
@@ -349,18 +378,18 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                             <button
                               onClick={() => moveAction(action, "up")}
                               disabled={idx === 0}
-                              className="text-xs px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-30"
+                              className="text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 disabled:opacity-30"
                               title="Move up"
                             >↑</button>
                             <button
                               onClick={() => moveAction(action, "down")}
                               disabled={idx === sortedActions.length - 1}
-                              className="text-xs px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-30"
+                              className="text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 disabled:opacity-30"
                               title="Move down"
                             >↓</button>
                             <button
                               onClick={() => deleteAction(action.id)}
-                              className="text-xs px-1.5 py-0.5 rounded bg-red-50 hover:bg-red-100 text-red-500"
+                              className="text-xs px-1.5 py-0.5 rounded bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-500"
                               title="Delete"
                             >✕</button>
                           </div>
@@ -379,7 +408,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                   onChange={(e) => setNewActionText(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") addAction(); }}
                   placeholder="Add an action…"
-                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button
                   onClick={addAction}
@@ -392,22 +421,22 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
             </div>
 
             {/* Comments */}
-            <div className="bg-white rounded-lg border border-gray-200 p-5">
-              <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">
-                Comments <span className="font-normal text-gray-400">({task.comments.length})</span>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-4">
+                Comments <span className="font-normal text-gray-400 dark:text-gray-500">({task.comments.length})</span>
               </h2>
 
               <div className="space-y-1 mb-4">
                 {task.comments.length === 0 && (
-                  <p className="text-sm text-gray-400 italic">No comments yet.</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500 italic">No comments yet.</p>
                 )}
                 {task.comments.map((comment: TaskComment) => (
                   <div
                     key={comment.id}
                     className={`rounded-lg px-3 py-2 text-sm group ${
                       isAutoComment(comment.text)
-                        ? "bg-green-50 border border-green-100"
-                        : "bg-gray-50 border border-gray-100"
+                        ? "bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/50"
+                        : "bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600"
                     }`}
                   >
                     {editingCommentId === comment.id ? (
@@ -419,24 +448,24 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                             if (e.key === "Enter") saveCommentEdit(comment.id);
                             if (e.key === "Escape") setEditingCommentId(null);
                           }}
-                          className="flex-1 border border-blue-300 rounded px-2 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="flex-1 border border-blue-300 dark:border-blue-500 rounded px-2 py-0.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
                           autoFocus
                         />
                         <button onClick={() => saveCommentEdit(comment.id)} className="text-xs text-blue-600 hover:text-blue-800">Save</button>
-                        <button onClick={() => setEditingCommentId(null)} className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+                        <button onClick={() => setEditingCommentId(null)} className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">✕</button>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <p className={`flex-1 ${isAutoComment(comment.text) ? "text-green-800" : "text-gray-800"}`}>
+                        <p className={`flex-1 ${isAutoComment(comment.text) ? "text-green-800 dark:text-green-300" : "text-gray-800 dark:text-gray-200"}`}>
                           {comment.text}
                         </p>
-                        <span className="text-xs text-gray-400 shrink-0 whitespace-nowrap">
+                        <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0 whitespace-nowrap">
                           {new Date(comment.createdAt).toLocaleString()}
                         </span>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 shrink-0">
                           <button
                             onClick={() => { setEditingCommentId(comment.id); setEditingCommentText(comment.text); }}
-                            className="text-xs text-gray-400 hover:text-gray-600 px-1"
+                            className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 px-1"
                             title="Edit"
                           >✎</button>
                           <button
@@ -457,7 +486,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                   onChange={(e) => setNewCommentText(e.target.value)}
                   rows={3}
                   placeholder="Add a comment…"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button
                   onClick={addComment}
@@ -473,15 +502,15 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
           {/* ── Right: metadata sidebar ────────────────────────────────────── */}
           <div className="w-64 shrink-0 space-y-4">
 
-            <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-4">
 
               {/* Status */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Status</label>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Status</label>
                 <select
                   value={task.status}
                   onChange={(e) => patchTask({ status: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={sidebarInputCls}
                 >
                   {TASK_STATUSES.map((s) => (
                     <option key={s} value={s}>{STATUS_LABELS[s as TaskStatus]}</option>
@@ -491,11 +520,11 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
 
               {/* Priority */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Priority</label>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Priority</label>
                 <select
                   value={task.priority}
                   onChange={(e) => patchTask({ priority: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={sidebarInputCls}
                 >
                   {TASK_PRIORITIES.map((p) => (
                     <option key={p} value={p} style={{ color: PRIORITY_COLORS[p as TaskPriority] }}>
@@ -507,8 +536,8 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
 
               {/* Board */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Board</label>
-                <div className="flex items-center gap-2 text-sm text-gray-700">
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Board</label>
+                <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                   <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: task.board.color }} />
                   {task.board.name}
                 </div>
@@ -517,7 +546,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
               {/* Categories */}
               {task.board.categories.length > 0 && (
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Categories</label>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Categories</label>
                   <div className="flex flex-wrap gap-1.5">
                     {task.board.categories.map((cat) => {
                       const active = task.categories.some((c) => c.id === cat.id);
@@ -531,7 +560,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                             patchTask({ categoryIds: next });
                           }}
                           className={`text-xs px-2.5 py-1 rounded-full border-2 transition-all ${
-                            active ? "text-white border-transparent" : "bg-white border-gray-300 text-gray-600 hover:border-gray-400"
+                            active ? "text-white border-transparent" : "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-500"
                           }`}
                           style={active ? { backgroundColor: cat.color, borderColor: cat.color } : undefined}
                         >
@@ -545,30 +574,30 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
 
               {/* Due Date */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Due Date</label>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Due Date</label>
                 <input
                   type="date"
                   defaultValue={task.dueDate ? task.dueDate.split("T")[0] : ""}
                   onBlur={(e) => patchTask({ dueDate: e.target.value || null })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={sidebarInputCls}
                 />
               </div>
 
               {/* Estimated */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Estimated (min)</label>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Estimated (min)</label>
                 <input
                   type="number"
                   defaultValue={task.estimatedMin ?? ""}
                   onBlur={(e) => patchTask({ estimatedMin: e.target.value ? parseInt(e.target.value) : null })}
                   min="0"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={sidebarInputCls}
                 />
               </div>
 
               {/* Tags */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Tags</label>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Tags</label>
                 <input
                   type="text"
                   defaultValue={JSON.parse(task.tags || "[]").join(", ")}
@@ -580,13 +609,13 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                     patchTask({ tags: JSON.stringify(tags) });
                   }}
                   placeholder="tag1, tag2"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={sidebarInputCls}
                 />
               </div>
             </div>
 
             {/* Timestamps */}
-            <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-1 text-xs text-gray-400">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-1 text-xs text-gray-400 dark:text-gray-500">
               <div>Created {new Date(task.createdAt).toLocaleString()}</div>
               <div>Updated {new Date(task.updatedAt).toLocaleString()}</div>
             </div>

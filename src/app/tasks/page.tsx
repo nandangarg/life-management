@@ -102,14 +102,14 @@ export default function TasksPage() {
   }
 
   function SortIcon({ col }: { col: SortKey }) {
-    if (sortKey !== col) return <span className="ml-1 text-gray-300">↕</span>;
+    if (sortKey !== col) return <span className="ml-1 text-gray-300 dark:text-gray-600">↕</span>;
     return <span className="ml-1 text-blue-600">{sortDir === "asc" ? "↑" : "↓"}</span>;
   }
 
   function Th({ col, label }: { col: SortKey; label: string }) {
     return (
       <th
-        className="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer select-none hover:bg-gray-100 whitespace-nowrap"
+        className="px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700 whitespace-nowrap"
         onClick={() => handleSort(col)}
       >
         {label}<SortIcon col={col} />
@@ -117,34 +117,40 @@ export default function TasksPage() {
     );
   }
 
+  const filterInputCls = "border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500";
+
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen"><div className="text-gray-500">Loading…</div></div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
+        <div className="text-gray-500 dark:text-gray-400">Loading…</div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white border-b border-gray-200 shadow-sm">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
-          <Link href="/" className="text-sm text-gray-500 hover:text-gray-800">← Life Manager</Link>
-          <h1 className="text-xl font-bold text-gray-900">All Tasks</h1>
-          <span className="text-sm text-gray-400 ml-auto">{sorted.length} of {allTasks.length} tasks</span>
+          <Link href="/" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">← Life Manager</Link>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">All Tasks</h1>
+          <span className="text-sm text-gray-400 dark:text-gray-500 ml-auto">{sorted.length} of {allTasks.length} tasks</span>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         {/* Filters */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4 flex flex-wrap gap-3 items-center">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-4 flex flex-wrap gap-3 items-center">
           <input
             type="text"
             placeholder="Search tasks…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-52"
+            className={`${filterInputCls} w-52`}
           />
           <select
             value={filterBoard}
             onChange={(e) => { setFilterBoard(e.target.value); setFilterCategory(""); }}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={filterInputCls}
           >
             <option value="">All boards</option>
             {boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -152,7 +158,7 @@ export default function TasksPage() {
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={filterInputCls}
             disabled={visibleCategories.length === 0}
           >
             <option value="">All categories</option>
@@ -161,7 +167,7 @@ export default function TasksPage() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={filterInputCls}
           >
             <option value="">All statuses</option>
             {TASK_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
@@ -169,7 +175,7 @@ export default function TasksPage() {
           <select
             value={filterPriority}
             onChange={(e) => setFilterPriority(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={filterInputCls}
           >
             <option value="">All priorities</option>
             {TASK_PRIORITIES.map((p) => <option key={p} value={p}>{p.charAt(0) + p.slice(1).toLowerCase()}</option>)}
@@ -177,7 +183,7 @@ export default function TasksPage() {
           {(search || filterBoard || filterCategory || filterStatus || filterPriority) && (
             <button
               onClick={() => { setSearch(""); setFilterBoard(""); setFilterCategory(""); setFilterStatus(""); setFilterPriority(""); }}
-              className="text-sm text-gray-500 hover:text-gray-800 underline"
+              className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 underline"
             >
               Clear filters
             </button>
@@ -185,12 +191,12 @@ export default function TasksPage() {
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
           {sorted.length === 0 ? (
-            <div className="text-center py-16 text-gray-400">No tasks match your filters.</div>
+            <div className="text-center py-16 text-gray-400 dark:text-gray-500">No tasks match your filters.</div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="border-b border-gray-200 bg-gray-50">
+              <thead className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
                 <tr>
                   <Th col="title" label="Title" />
                   <Th col="boardName" label="Board" />
@@ -203,19 +209,19 @@ export default function TasksPage() {
                   <Th col="createdAt" label="Created" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {sorted.map((task) => {
                   const totalActions = task.actions.length;
                   const completedActions = task.actions.filter((a) => a.isCompleted).length;
                   return (
-                    <tr key={task.id} className="hover:bg-gray-50">
+                    <tr key={task.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-3 py-2.5 max-w-xs">
-                        <Link href={`/tasks/${task.id}`} className="font-medium text-gray-900 hover:text-blue-600 truncate block">
+                        <Link href={`/tasks/${task.id}`} className="font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 truncate block">
                           {task.title}
                         </Link>
-                        {task.description && <div className="text-xs text-gray-400 truncate">{task.description}</div>}
+                        {task.description && <div className="text-xs text-gray-400 dark:text-gray-500 truncate">{task.description}</div>}
                       </td>
-                      <td className="px-3 py-2.5 whitespace-nowrap">
+                      <td className="px-3 py-2.5 whitespace-nowrap text-gray-700 dark:text-gray-300">
                         <span className="inline-flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: task.boardColor }} />
                           {task.boardName}
@@ -230,13 +236,13 @@ export default function TasksPage() {
                               </span>
                             ))}
                           </div>
-                        ) : <span className="text-gray-300">—</span>}
+                        ) : <span className="text-gray-300 dark:text-gray-600">—</span>}
                       </td>
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                          task.status === "DONE" ? "bg-green-100 text-green-700" :
-                          task.status === "IN_PROGRESS" ? "bg-blue-100 text-blue-700" :
-                          "bg-gray-100 text-gray-600"
+                          task.status === "DONE" ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" :
+                          task.status === "IN_PROGRESS" ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400" :
+                          "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                         }`}>
                           {STATUS_LABELS[task.status as TaskStatus]}
                         </span>
@@ -244,23 +250,23 @@ export default function TasksPage() {
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         <span className="inline-flex items-center gap-1">
                           <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: PRIORITY_COLORS[task.priority as TaskPriority] }} />
-                          {task.priority.charAt(0) + task.priority.slice(1).toLowerCase()}
+                          <span className="text-gray-700 dark:text-gray-300">{task.priority.charAt(0) + task.priority.slice(1).toLowerCase()}</span>
                         </span>
                       </td>
                       <td className="px-3 py-2.5 whitespace-nowrap text-xs">
                         {totalActions > 0 ? (
-                          <span className={completedActions === totalActions ? "text-green-600 font-medium" : "text-gray-500"}>
+                          <span className={completedActions === totalActions ? "text-green-600 dark:text-green-400 font-medium" : "text-gray-500 dark:text-gray-400"}>
                             ✓ {completedActions}/{totalActions}
                           </span>
-                        ) : <span className="text-gray-300">—</span>}
+                        ) : <span className="text-gray-300 dark:text-gray-600">—</span>}
                       </td>
-                      <td className="px-3 py-2.5 whitespace-nowrap text-gray-500">
-                        {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : <span className="text-gray-300">—</span>}
+                      <td className="px-3 py-2.5 whitespace-nowrap text-gray-500 dark:text-gray-400">
+                        {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : <span className="text-gray-300 dark:text-gray-600">—</span>}
                       </td>
-                      <td className="px-3 py-2.5 whitespace-nowrap text-gray-500">
-                        {task.estimatedMin != null ? `${task.estimatedMin}m` : <span className="text-gray-300">—</span>}
+                      <td className="px-3 py-2.5 whitespace-nowrap text-gray-500 dark:text-gray-400">
+                        {task.estimatedMin != null ? `${task.estimatedMin}m` : <span className="text-gray-300 dark:text-gray-600">—</span>}
                       </td>
-                      <td className="px-3 py-2.5 whitespace-nowrap text-gray-400 text-xs">
+                      <td className="px-3 py-2.5 whitespace-nowrap text-gray-400 dark:text-gray-500 text-xs">
                         {new Date(task.createdAt).toLocaleDateString()}
                       </td>
                     </tr>

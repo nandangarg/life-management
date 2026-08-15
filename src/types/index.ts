@@ -46,6 +46,10 @@ export interface Task {
   dueDate: string | null;
   position: number;
   tags: string;
+  startTime: string | null;
+  endTime: string | null;
+  isRecurring: boolean;
+  recurrenceRule: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -61,6 +65,7 @@ export interface TaskSchedule {
   recurrenceRule: string | null;
   completedAt: string | null;
   notes: string | null;
+  isCancelled: boolean;
 }
 
 export interface TaskComment {

@@ -22,6 +22,10 @@ export async function POST(request: NextRequest) {
       dueDate: body.dueDate ? new Date(body.dueDate) : null,
       position: (maxPosition._max.position ?? -1) + 1,
       tags: body.tags || "[]",
+      startTime: body.startTime || null,
+      endTime: body.endTime || null,
+      isRecurring: body.isRecurring || false,
+      recurrenceRule: body.recurrenceRule || null,
       categories: {
         create: categoryIds.map((categoryId) => ({ categoryId })),
       },

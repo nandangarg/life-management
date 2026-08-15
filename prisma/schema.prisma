@@ -44,6 +44,10 @@ model Task {
   dueDate      DateTime?
   position     Int       @default(0)
   tags         String    @default("[]") // JSON array stored as string
+  startTime      String?
+  endTime        String?
+  isRecurring    Boolean   @default(false)
+  recurrenceRule String?   // e.g. "DAILY", "WEEKLY:MON", etc.
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -75,6 +79,7 @@ model TaskSchedule {
   recurrenceRule String?   // e.g. "WEEKLY:SUN", "DAILY"
   completedAt    DateTime?
   notes          String?
+  isCancelled    Boolean   @default(false)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 

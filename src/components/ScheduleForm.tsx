@@ -33,17 +33,19 @@ export default function ScheduleForm({ tasks, date, onSubmit, onClose }: Schedul
     });
   };
 
+  const inputCls = "w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500";
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold mb-4">Schedule Task for {date}</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Schedule Task for {date}</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Task *</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Task *</label>
             <select
               value={taskId}
               onChange={(e) => setTaskId(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={inputCls}
             >
               <option value="">Select a task</option>
               {tasks.map((t) => (
@@ -56,27 +58,27 @@ export default function ScheduleForm({ tasks, date, onSubmit, onClose }: Schedul
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Time</label>
               <input
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={inputCls}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Time</label>
               <input
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={inputCls}
               />
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <input
                 type="checkbox"
                 checked={isFixed}
@@ -85,7 +87,7 @@ export default function ScheduleForm({ tasks, date, onSubmit, onClose }: Schedul
               />
               Fixed time (immovable)
             </label>
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
               <input
                 type="checkbox"
                 checked={isRecurring}
@@ -98,11 +100,11 @@ export default function ScheduleForm({ tasks, date, onSubmit, onClose }: Schedul
 
           {isRecurring && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Recurrence Rule</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Recurrence Rule</label>
               <select
                 value={recurrenceRule}
                 onChange={(e) => setRecurrenceRule(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={inputCls}
               >
                 <option value="">Select pattern</option>
                 <option value="DAILY">Daily</option>
@@ -121,7 +123,7 @@ export default function ScheduleForm({ tasks, date, onSubmit, onClose }: Schedul
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+              className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
             >
               Cancel
             </button>

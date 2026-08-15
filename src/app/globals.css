@@ -1,7 +1,12 @@
 @import "tailwindcss";
+@variant dark (&:where(.dark, .dark *));
 
 :root {
   color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -13,6 +18,11 @@ body {
   background: #ffffff;
   color: #171717;
   font-family: Arial, Helvetica, sans-serif;
+}
+
+.dark body {
+  background: #111827;
+  color: #f9fafb;
 }
 
 input, textarea, select, button {
