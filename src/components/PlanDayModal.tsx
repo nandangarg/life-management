@@ -11,7 +11,7 @@ interface PlanDayModalProps {
   onClose: () => void;
 }
 
-const HOURS = Array.from({ length: 16 }, (_, i) => i + 6); // 6 AM to 9 PM
+const HOURS = Array.from({ length: 20 }, (_, i) => i + 4); // 4 AM to 11 PM
 
 export default function PlanDayModal({
   date,
@@ -89,10 +89,10 @@ export default function PlanDayModal({
       isUnscheduled: boolean;
     }> = [];
 
-    // Tracks blocked minutes. Represented as 30-minute intervals from 6:00 to 21:00 (15 hours = 30 intervals)
-    const totalSlots = 30;
-    const startMins = 6 * 60; // 6 AM
-    const slotMins = 30;
+    // Tracks blocked minutes. Represented as 5-minute intervals from 4:00 to 24:00 (20 hours = 240 intervals)
+    const totalSlots = 240;
+    const startMins = 4 * 60; // 4 AM
+    const slotMins = 5;
     const occupiedSlots = new Array(totalSlots).fill(false);
 
     // Mark pre-existing occupied slots
@@ -111,14 +111,13 @@ export default function PlanDayModal({
 
     const selectedTasks = candidateTasks.filter((t) => selectedTaskIds.includes(t.id));
 
-    // First pass: Schedule Fixed-time Tasks
+    // First pass: Schedule Fixed-time Tasks (isFixed or user manually specified time)
     selectedTasks.forEach((task) => {
-      // Check if user set manual overrides, or task has defaults
       const custom = manualTimes[task.id];
       const startStr = custom?.startTime || task.startTime;
       const endStr = custom?.endTime || task.endTime;
 
-      if (startStr && endStr) {
+      if (startStr && endStr && (task.isFixed || custom?.startTime)) {
         result.push({
           task,
           startTime: startStr,
@@ -139,15 +138,24 @@ export default function PlanDayModal({
       }
     });
 
+    // Sort selected tasks by priority for flexible scheduling
+    const priorityWeights: Record<string, number> = { URGENT: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+    const sortedSelectedTasks = [...selectedTasks].sort((a, b) => {
+      const wa = priorityWeights[a.priority] || 2;
+      const wb = priorityWeights[b.priority] || 2;
+      return wb - wa;
+    });
+
     // Second pass: Schedule Flexible Tasks (order by priority)
-    selectedTasks.forEach((task) => {
+    sortedSelectedTasks.forEach((task) => {
       const custom = manualTimes[task.id];
       // Skip if already scheduled in first pass
-      if (custom?.startTime || task.startTime) return;
+      const isAlreadyScheduled = result.some((p) => p.task.id === task.id);
+      if (isAlreadyScheduled) return;
 
       const durationMins = task.estimatedMin || 60;
-      // Round to nearest slot count
       const slotsNeeded = Math.ceil(durationMins / slotMins);
+      const breakSlots = 2; // 10 minutes break
 
       // Find first consecutive free slots
       let foundIndex = -1;
@@ -182,6 +190,14 @@ export default function PlanDayModal({
         // Block these slots
         for (let j = 0; j < slotsNeeded; j++) {
           occupiedSlots[foundIndex + j] = true;
+        }
+
+        // Block subsequent 10 minutes as a break
+        const breakStart = foundIndex + slotsNeeded;
+        for (let j = 0; j < breakSlots; j++) {
+          if (breakStart + j < totalSlots) {
+            occupiedSlots[breakStart + j] = true;
+          }
         }
       } else {
         // Unscheduled due to no time slot fitting
@@ -364,6 +380,7 @@ export default function PlanDayModal({
                               value={p.startTime}
                               onChange={(e) => handleManualTimeChange(p.task.id, "startTime", e.target.value)}
                               className={sidebarInputCls}
+                              step="300"
                             />
                             <span className="text-gray-400 text-xs">—</span>
                             <input
@@ -371,6 +388,7 @@ export default function PlanDayModal({
                               value={p.endTime}
                               onChange={(e) => handleManualTimeChange(p.task.id, "endTime", e.target.value)}
                               className={sidebarInputCls}
+                              step="300"
                             />
                           </div>
                         )}

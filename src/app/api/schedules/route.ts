@@ -8,6 +8,88 @@ const taskInclude = {
   actions: { orderBy: { position: "asc" } },
 } as const;
 
+function matchesRecurrence(task: any, dateStr: string): boolean {
+  if (!task.isRecurring || !task.recurrenceRule) return false;
+
+  const reqDate = new Date(dateStr + "T12:00:00");
+  const createdDate = new Date(task.createdAt);
+  
+  const reqTime = reqDate.getTime();
+  const createdTime = new Date(createdDate.toISOString().split("T")[0] + "T12:00:00").getTime();
+
+  if (reqTime < createdTime) return false;
+
+  const diffDays = Math.floor((reqTime - createdTime) / (1000 * 60 * 60 * 24));
+
+  let rule: {
+    frequency: "day" | "week" | "month" | "year";
+    interval: number;
+    weekdays?: string[];
+    until?: string | null;
+  };
+
+  try {
+    if (task.recurrenceRule.startsWith("{")) {
+      rule = JSON.parse(task.recurrenceRule);
+    } else {
+      if (task.recurrenceRule === "DAILY") {
+        rule = { frequency: "day", interval: 1 };
+      } else if (task.recurrenceRule.startsWith("WEEKLY:")) {
+        const day = task.recurrenceRule.split(":")[1];
+        rule = { frequency: "week", interval: 1, weekdays: [day] };
+      } else {
+        return false;
+      }
+    }
+  } catch (err) {
+    console.error("Failed to parse recurrence rule:", task.recurrenceRule, err);
+    return false;
+  }
+
+  if (rule.until) {
+    const untilTime = new Date(rule.until + "T12:00:00").getTime();
+    if (reqTime > untilTime) return false;
+  }
+
+  const interval = rule.interval || 1;
+
+  if (rule.frequency === "day") {
+    return diffDays % interval === 0;
+  }
+
+  if (rule.frequency === "week") {
+    const dayNames = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+    const currentDayName = dayNames[reqDate.getDay()];
+    
+    const weekdays = rule.weekdays || [];
+    if (weekdays.length > 0 && !weekdays.includes(currentDayName)) {
+      return false;
+    }
+
+    const createdDayOfWeek = createdDate.getDay();
+    const reqDayOfWeek = reqDate.getDay();
+    const createdSunday = createdTime - createdDayOfWeek * (24 * 60 * 60 * 1000);
+    const reqSunday = reqTime - reqDayOfWeek * (24 * 60 * 60 * 1000);
+    const diffWeeks = Math.round((reqSunday - createdSunday) / (7 * 24 * 60 * 60 * 1000));
+
+    return diffWeeks % interval === 0;
+  }
+
+  if (rule.frequency === "month") {
+    if (reqDate.getDate() !== createdDate.getDate()) return false;
+    const diffMonths = (reqDate.getFullYear() - createdDate.getFullYear()) * 12 + (reqDate.getMonth() - createdDate.getMonth());
+    return diffMonths % interval === 0;
+  }
+
+  if (rule.frequency === "year") {
+    if (reqDate.getDate() !== createdDate.getDate() || reqDate.getMonth() !== createdDate.getMonth()) return false;
+    const diffYears = reqDate.getFullYear() - createdDate.getFullYear();
+    return diffYears % interval === 0;
+  }
+
+  return false;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date");
@@ -21,18 +103,10 @@ export async function GET(request: NextRequest) {
   let projectedSchedules = schedules.map((s) => ({ ...s, task: transformTask(s.task) }));
 
   if (date) {
-    const dayNames = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-    const d = new Date(date + "T12:00:00");
-    const dayOfWeekName = dayNames[d.getDay()];
-
     const recurringTasks = await prisma.task.findMany({
       where: {
         isRecurring: true,
         status: { not: "DONE" },
-        OR: [
-          { recurrenceRule: "DAILY" },
-          { recurrenceRule: `WEEKLY:${dayOfWeekName}` }
-        ]
       },
       include: {
         categories: { include: { category: true }, orderBy: { category: { position: "asc" } } },
@@ -47,7 +121,9 @@ export async function GET(request: NextRequest) {
     });
     const scheduledTaskIds = new Set(allSchedulesForDate.map(s => s.taskId));
 
-    for (const task of recurringTasks) {
+    const matchingTasks = recurringTasks.filter(t => matchesRecurrence(t, date));
+
+    for (const task of matchingTasks) {
       if (!scheduledTaskIds.has(task.id)) {
         projectedSchedules.push({
           id: `virtual_${task.id}`,
@@ -55,7 +131,7 @@ export async function GET(request: NextRequest) {
           date,
           startTime: task.startTime || "09:00",
           endTime: task.endTime || "10:00",
-          isFixed: false,
+          isFixed: task.isFixed,
           isRecurring: true,
           recurrenceRule: task.recurrenceRule,
           completedAt: null,

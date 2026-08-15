@@ -41,6 +41,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (body.tags !== undefined) data.tags = body.tags;
   if (body.startTime !== undefined) data.startTime = body.startTime;
   if (body.endTime !== undefined) data.endTime = body.endTime;
+  if (body.isFixed !== undefined) data.isFixed = body.isFixed;
   if (body.isRecurring !== undefined) data.isRecurring = body.isRecurring;
   if (body.recurrenceRule !== undefined) data.recurrenceRule = body.recurrenceRule;
 

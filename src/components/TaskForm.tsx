@@ -21,8 +21,50 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onSubmit
   const [dueDate, setDueDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [isFixed, setIsFixed] = useState(false);
   const [isRecurring, setIsRecurring] = useState(false);
-  const [recurrenceRule, setRecurrenceRule] = useState("");
+
+  // Advanced Recurrence state
+  const [freq, setFreq] = useState<"day" | "week" | "month" | "year">("week");
+  const [interval, setIntervalVal] = useState(1);
+  const [weekdays, setWeekdays] = useState<string[]>([]);
+  const [until, setUntil] = useState("");
+
+  const DAYS = [
+    { label: "M", value: "MON" },
+    { label: "T", value: "TUE" },
+    { label: "W", value: "WED" },
+    { label: "T", value: "THU" },
+    { label: "F", value: "FRI" },
+    { label: "S", value: "SAT" },
+    { label: "S", value: "SUN" },
+  ];
+
+  function parseRecurrenceRule(ruleStr: string | null) {
+    const defaultRule = { frequency: "week" as const, interval: 1, weekdays: [] as string[], until: "" };
+    if (!ruleStr) return defaultRule;
+    try {
+      if (ruleStr.startsWith("{")) {
+        const parsed = JSON.parse(ruleStr);
+        return {
+          frequency: parsed.frequency || "week",
+          interval: parsed.interval || 1,
+          weekdays: parsed.weekdays || [],
+          until: parsed.until || "",
+        };
+      } else {
+        if (ruleStr === "DAILY") {
+          return { frequency: "day" as const, interval: 1, weekdays: [], until: "" };
+        } else if (ruleStr.startsWith("WEEKLY:")) {
+          const day = ruleStr.split(":")[1];
+          return { frequency: "week" as const, interval: 1, weekdays: [day], until: "" };
+        }
+      }
+    } catch (err) {
+      console.error("Failed to parse recurrence rule:", err);
+    }
+    return defaultRule;
+  }
 
   useEffect(() => {
     if (task) {
@@ -34,8 +76,14 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onSubmit
       setDueDate(task.dueDate ? task.dueDate.split("T")[0] : "");
       setStartTime(task.startTime || "");
       setEndTime(task.endTime || "");
+      setIsFixed(task.isFixed || false);
       setIsRecurring(task.isRecurring || false);
-      setRecurrenceRule(task.recurrenceRule || "");
+
+      const parsed = parseRecurrenceRule(task.recurrenceRule);
+      setFreq(parsed.frequency);
+      setIntervalVal(parsed.interval);
+      setWeekdays(parsed.weekdays);
+      setUntil(parsed.until ? parsed.until.split("T")[0] : "");
     }
   }, [task]);
 
@@ -45,7 +93,22 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onSubmit
     );
   }
 
+  function toggleWeekday(val: string) {
+    setWeekdays((prev) =>
+      prev.includes(val) ? prev.filter((d) => d !== val) : [...prev, val]
+    );
+  }
+
   function buildData() {
+    const recurrenceRuleStr = isRecurring
+      ? JSON.stringify({
+          frequency: freq,
+          interval,
+          weekdays: freq === "week" ? weekdays : undefined,
+          until: until || null,
+        })
+      : null;
+
     return {
       boardId,
       categoryIds,
@@ -56,8 +119,9 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onSubmit
       dueDate: dueDate || null,
       startTime: startTime || null,
       endTime: endTime || null,
+      isFixed,
       isRecurring,
-      recurrenceRule: isRecurring && recurrenceRule ? recurrenceRule : null,
+      recurrenceRule: recurrenceRuleStr,
     };
   }
 
@@ -71,9 +135,9 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onSubmit
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{task ? "Edit Task" : "New Task"}</h3>
-        <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
+        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-1 flex-1">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title *</label>
             <input
@@ -162,6 +226,7 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onSubmit
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
                 className={inputCls}
+                step="300"
               />
             </div>
             <div>
@@ -171,41 +236,92 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onSubmit
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
                 className={inputCls}
+                step="300"
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-2 py-1">
-            <input
-              type="checkbox"
-              id="isRecurring"
-              checked={isRecurring}
-              onChange={(e) => setIsRecurring(e.target.checked)}
-              className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 w-4 h-4"
-            />
-            <label htmlFor="isRecurring" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+          <div className="flex flex-col gap-2 py-1">
+            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={isFixed}
+                onChange={(e) => setIsFixed(e.target.checked)}
+                className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 w-4 h-4"
+              />
+              Is Task Fixed Time (Immovable)
+            </label>
+
+            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={isRecurring}
+                onChange={(e) => setIsRecurring(e.target.checked)}
+                className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 w-4 h-4"
+              />
               Is Recurring Routine
             </label>
           </div>
 
           {isRecurring && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Recurrence Pattern</label>
-              <select
-                value={recurrenceRule}
-                onChange={(e) => setRecurrenceRule(e.target.value)}
-                className={inputCls}
-              >
-                <option value="">Select pattern</option>
-                <option value="DAILY">Daily</option>
-                <option value="WEEKLY:MON">Weekly - Monday</option>
-                <option value="WEEKLY:TUE">Weekly - Tuesday</option>
-                <option value="WEEKLY:WED">Weekly - Wednesday</option>
-                <option value="WEEKLY:THU">Weekly - Thursday</option>
-                <option value="WEEKLY:FRI">Weekly - Friday</option>
-                <option value="WEEKLY:SAT">Weekly - Saturday</option>
-                <option value="WEEKLY:SUN">Weekly - Sunday</option>
-              </select>
+            <div className="space-y-3 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <span>Repeat every</span>
+                <select
+                  value={interval}
+                  onChange={(e) => setIntervalVal(parseInt(e.target.value))}
+                  className="border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 bg-white dark:bg-gray-700 text-gray-950 dark:text-gray-50 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  {Array.from({ length: 30 }, (_, i) => i + 1).map((val) => (
+                    <option key={val} value={val}>{val}</option>
+                  ))}
+                </select>
+                <select
+                  value={freq}
+                  onChange={(e) => setFreq(e.target.value as any)}
+                  className="border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 bg-white dark:bg-gray-700 text-gray-950 dark:text-gray-50 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="day">day{interval > 1 && "s"}</option>
+                  <option value="week">week{interval > 1 && "s"}</option>
+                  <option value="month">month{interval > 1 && "s"}</option>
+                  <option value="year">year{interval > 1 && "s"}</option>
+                </select>
+              </div>
+
+              {freq === "week" && (
+                <div>
+                  <span className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Repeat on</span>
+                  <div className="flex gap-1.5">
+                    {DAYS.map((d) => {
+                      const active = weekdays.includes(d.value);
+                      return (
+                        <button
+                          key={d.value}
+                          type="button"
+                          onClick={() => toggleWeekday(d.value)}
+                          className={`w-7 h-7 rounded-full text-xs font-bold transition-all border ${
+                            active
+                              ? "bg-blue-600 text-white border-transparent"
+                              : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
+                          }`}
+                        >
+                          {d.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Until</label>
+                <input
+                  type="date"
+                  value={until}
+                  onChange={(e) => setUntil(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
             </div>
           )}
 

@@ -64,6 +64,7 @@ export default function ScheduleForm({ tasks, date, onSubmit, onClose }: Schedul
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
                 className={inputCls}
+                step="300"
               />
             </div>
             <div>
@@ -73,6 +74,7 @@ export default function ScheduleForm({ tasks, date, onSubmit, onClose }: Schedul
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
                 className={inputCls}
+                step="300"
               />
             </div>
           </div>

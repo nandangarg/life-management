@@ -201,6 +201,52 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
     }
   }
 
+  const parsedRule = (() => {
+    const defaultRule = { frequency: "week" as const, interval: 1, weekdays: [] as string[], until: "" };
+    if (!task || !task.recurrenceRule) return defaultRule;
+    try {
+      if (task.recurrenceRule.startsWith("{")) {
+        const parsed = JSON.parse(task.recurrenceRule);
+        return {
+          frequency: parsed.frequency || "week",
+          interval: parsed.interval || 1,
+          weekdays: parsed.weekdays || [],
+          until: parsed.until || "",
+        };
+      } else {
+        if (task.recurrenceRule === "DAILY") {
+          return { frequency: "day" as const, interval: 1, weekdays: [], until: "" };
+        } else if (task.recurrenceRule.startsWith("WEEKLY:")) {
+          const day = task.recurrenceRule.split(":")[1];
+          return { frequency: "week" as const, interval: 1, weekdays: [day], until: "" };
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    return defaultRule;
+  })();
+
+  const updateRecurrenceRule = (updates: Partial<{
+    frequency: "day" | "week" | "month" | "year";
+    interval: number;
+    weekdays: string[];
+    until: string | null;
+  }>) => {
+    const nextRule = {
+      frequency: updates.frequency !== undefined ? updates.frequency : parsedRule.frequency,
+      interval: updates.interval !== undefined ? updates.interval : parsedRule.interval,
+      weekdays: updates.weekdays !== undefined ? updates.weekdays : parsedRule.weekdays,
+      until: updates.until !== undefined ? updates.until : (parsedRule.until || null),
+    };
+    
+    if (nextRule.frequency !== "week") {
+      delete (nextRule as any).weekdays;
+    }
+    
+    patchTask({ recurrenceRule: JSON.stringify(nextRule) });
+  };
+
   if (loading || !task) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -574,13 +620,137 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
 
               {/* Due Date */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Due Date</label>
+                <label className="block text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Due Date</label>
                 <input
                   type="date"
                   defaultValue={task.dueDate ? task.dueDate.split("T")[0] : ""}
                   onBlur={(e) => patchTask({ dueDate: e.target.value || null })}
                   className={sidebarInputCls}
                 />
+              </div>
+
+              {/* Time defaults & IsFixed */}
+              <div className="space-y-3 pt-1">
+                <label className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={task.isFixed}
+                    onChange={(e) => patchTask({ isFixed: e.target.checked })}
+                    className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                  />
+                  Fixed Time (Immovable)
+                </label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Start Time</label>
+                    <input
+                      type="time"
+                      value={task.startTime || ""}
+                      onChange={(e) => patchTask({ startTime: e.target.value || null })}
+                      className={sidebarInputCls}
+                      step="300"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">End Time</label>
+                    <input
+                      type="time"
+                      value={task.endTime || ""}
+                      onChange={(e) => patchTask({ endTime: e.target.value || null })}
+                      className={sidebarInputCls}
+                      step="300"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Recurring Routine */}
+              <div className="space-y-3 pt-1">
+                <label className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={task.isRecurring}
+                    onChange={(e) => patchTask({ isRecurring: e.target.checked })}
+                    className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                  />
+                  Is Recurring Routine
+                </label>
+
+                {task.isRecurring && (
+                  <div className="space-y-3 bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 text-xs">
+                    <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+                      <span>Repeat every</span>
+                      <select
+                        value={parsedRule.interval}
+                        onChange={(e) => updateRecurrenceRule({ interval: parseInt(e.target.value) })}
+                        className="border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        {Array.from({ length: 30 }, (_, i) => i + 1).map((val) => (
+                          <option key={val} value={val}>{val}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={parsedRule.frequency}
+                        onChange={(e) => updateRecurrenceRule({ frequency: e.target.value as any })}
+                        className="border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="day">day{parsedRule.interval > 1 && "s"}</option>
+                        <option value="week">week{parsedRule.interval > 1 && "s"}</option>
+                        <option value="month">month{parsedRule.interval > 1 && "s"}</option>
+                        <option value="year">year{parsedRule.interval > 1 && "s"}</option>
+                      </select>
+                    </div>
+
+                    {parsedRule.frequency === "week" && (
+                      <div>
+                        <span className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Repeat on</span>
+                        <div className="flex flex-wrap gap-1">
+                          {[
+                            { label: "M", value: "MON" },
+                            { label: "T", value: "TUE" },
+                            { label: "W", value: "WED" },
+                            { label: "T", value: "THU" },
+                            { label: "F", value: "FRI" },
+                            { label: "S", value: "SAT" },
+                            { label: "S", value: "SUN" },
+                          ].map((d) => {
+                            const active = parsedRule.weekdays.includes(d.value);
+                            return (
+                              <button
+                                key={d.value}
+                                type="button"
+                                onClick={() => {
+                                  const nextDays = active
+                                    ? parsedRule.weekdays.filter((val: string) => val !== d.value)
+                                    : [...parsedRule.weekdays, d.value];
+                                  updateRecurrenceRule({ weekdays: nextDays });
+                                }}
+                                className={`w-6 h-6 rounded-full text-[10px] font-bold transition-all border ${
+                                  active
+                                    ? "bg-blue-600 text-white border-transparent"
+                                    : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
+                                }`}
+                              >
+                                {d.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Until</label>
+                      <input
+                        type="date"
+                        value={parsedRule.until ? parsedRule.until.split("T")[0] : ""}
+                        onChange={(e) => updateRecurrenceRule({ until: e.target.value || null })}
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Estimated */}

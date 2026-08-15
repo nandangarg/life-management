@@ -46,6 +46,7 @@ model Task {
   tags         String    @default("[]") // JSON array stored as string
   startTime      String?
   endTime        String?
+  isFixed        Boolean   @default(false)
   isRecurring    Boolean   @default(false)
   recurrenceRule String?   // e.g. "DAILY", "WEEKLY:MON", etc.
   createdAt    DateTime  @default(now())

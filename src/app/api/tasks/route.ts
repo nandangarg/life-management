@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
       tags: body.tags || "[]",
       startTime: body.startTime || null,
       endTime: body.endTime || null,
+      isFixed: body.isFixed || false,
       isRecurring: body.isRecurring || false,
       recurrenceRule: body.recurrenceRule || null,
       categories: {

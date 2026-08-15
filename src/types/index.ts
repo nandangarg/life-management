@@ -48,6 +48,7 @@ export interface Task {
   tags: string;
   startTime: string | null;
   endTime: string | null;
+  isFixed: boolean;
   isRecurring: boolean;
   recurrenceRule: string | null;
   createdAt: string;
