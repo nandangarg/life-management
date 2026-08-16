@@ -211,31 +211,47 @@ export default function CalendarView({
                 const priorityColor =
                   PRIORITY_COLORS[schedule.task.priority as TaskPriority] || "#6b7280";
                 
+                const isShort = height < 45;
+                const minHeight = 22;
+                const finalHeight = Math.max(minHeight, height);
+                
                 return (
                   <div
                     key={schedule.id}
-                    className="absolute rounded-md p-2 text-xs text-white shadow-sm transition-all hover:brightness-105 border border-white/10"
+                    className="absolute rounded-md text-white shadow-sm transition-all hover:brightness-105 border border-white/10 overflow-hidden flex flex-col justify-start"
                     style={{
-                      top: `${top + 2}px`,
-                      height: `${height - 4}px`,
+                      top: `${top + 1}px`,
+                      height: `${finalHeight - 2}px`,
                       left: left,
                       width: `calc(${width} - 4px)`,
                       backgroundColor: priorityColor,
                       opacity: schedule.completedAt ? 0.6 : 1,
                       zIndex: 10,
+                      padding: isShort ? "1px 6px" : "4px 8px",
                     }}
                   >
-                    <div className="font-semibold truncate">{schedule.task.title}</div>
-                    <div className="opacity-90 text-[10px] truncate">
-                      {schedule.startTime} - {schedule.endTime}
-                      {schedule.isFixed && " (fixed)"}
-                    </div>
+                    {isShort ? (
+                      <div className="flex items-center gap-1.5 truncate w-full pr-8 text-[10px] leading-none h-full align-middle">
+                        <span className="font-bold truncate">{schedule.task.title}</span>
+                        <span className="opacity-80 text-[9px] shrink-0 font-medium">
+                          ({schedule.startTime} - {schedule.endTime}{schedule.isFixed && " *"})
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col justify-between h-full py-0.5">
+                        <div className="font-semibold text-xs truncate pr-8 leading-tight">{schedule.task.title}</div>
+                        <div className="opacity-90 text-[10px] truncate leading-none">
+                          {schedule.startTime} - {schedule.endTime}
+                          {schedule.isFixed && " (fixed)"}
+                        </div>
+                      </div>
+                    )}
                     
-                    <div className="absolute top-1 right-1 flex gap-1">
+                    <div className={`absolute flex gap-0.5 ${isShort ? "top-0.5 right-0.5 scale-80 origin-top-right" : "top-1 right-1"}`}>
                       {!schedule.completedAt && (
                         <button
                           onClick={() => onMarkComplete(schedule.id)}
-                          className="bg-white/30 hover:bg-white/50 rounded px-1 text-[10px] leading-none py-0.5"
+                          className="bg-white/30 hover:bg-white/50 rounded px-1 text-[10px] leading-none py-0.5 cursor-pointer"
                           title="Mark complete"
                         >
                           ✓
@@ -243,7 +259,7 @@ export default function CalendarView({
                       )}
                       <button
                         onClick={() => onDeleteSchedule(schedule.id)}
-                        className="bg-white/30 hover:bg-white/50 rounded px-1 text-[10px] leading-none py-0.5"
+                        className="bg-white/30 hover:bg-white/50 rounded px-1 text-[10px] leading-none py-0.5 cursor-pointer"
                         title="Remove"
                       >
                         ✕

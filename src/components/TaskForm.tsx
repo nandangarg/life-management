@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Category, TaskWithRelations, TASK_PRIORITIES, TaskPriority } from "@/types";
+import TimePicker from "./TimePicker";
 
 interface TaskFormProps {
   boardId: string;
@@ -12,25 +13,54 @@ interface TaskFormProps {
   onClose: () => void;
 }
 
+function parseRecurrenceRule(ruleStr: string | null) {
+  const defaultRule = { frequency: "week" as const, interval: 1, weekdays: [] as string[], until: "" };
+  if (!ruleStr) return defaultRule;
+  try {
+    if (ruleStr.startsWith("{")) {
+      const parsed = JSON.parse(ruleStr);
+      return {
+        frequency: parsed.frequency || "week",
+        interval: parsed.interval || 1,
+        weekdays: parsed.weekdays || [],
+        until: parsed.until || "",
+      };
+    } else {
+      if (ruleStr === "DAILY") {
+        return { frequency: "day" as const, interval: 1, weekdays: [], until: "" };
+      } else if (ruleStr.startsWith("WEEKLY:")) {
+        const day = ruleStr.split(":")[1];
+        return { frequency: "week" as const, interval: 1, weekdays: [day], until: "" };
+      }
+    }
+  } catch (err) {
+    console.error("Failed to parse recurrence rule:", err);
+  }
+  return defaultRule;
+}
+
 export default function TaskForm({ boardId, categories, task, onSubmit, onSubmitAndEdit, onClose }: TaskFormProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [categoryIds, setCategoryIds] = useState<string[]>([]);
-  const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
-  const [estimatedMin, setEstimatedMin] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [isFixed, setIsFixed] = useState(false);
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [isHabit, setIsHabit] = useState(false);
-  const [habitUnit, setHabitUnit] = useState("");
+  const [prevTaskId, setPrevTaskId] = useState<string | null>(task?.id || null);
+
+  const [title, setTitle] = useState(task?.title || "");
+  const [description, setDescription] = useState(task?.description || "");
+  const [categoryIds, setCategoryIds] = useState<string[]>(task?.categories.map((c) => c.id) || []);
+  const [priority, setPriority] = useState<TaskPriority>((task?.priority as TaskPriority) || "MEDIUM");
+  const [estimatedMin, setEstimatedMin] = useState(task?.estimatedMin?.toString() || "");
+  const [dueDate, setDueDate] = useState(task?.dueDate ? task.dueDate.split("T")[0] : "");
+  const [startTime, setStartTime] = useState(task?.startTime || "");
+  const [endTime, setEndTime] = useState(task?.endTime || "");
+  const [isFixed, setIsFixed] = useState(task?.isFixed || false);
+  const [isRecurring, setIsRecurring] = useState(task?.isRecurring || false);
+  const [isHabit, setIsHabit] = useState(task?.isHabit || false);
+  const [habitUnit, setHabitUnit] = useState(task?.habitUnit || "");
 
   // Advanced Recurrence state
-  const [freq, setFreq] = useState<"day" | "week" | "month" | "year">("week");
-  const [interval, setIntervalVal] = useState(1);
-  const [weekdays, setWeekdays] = useState<string[]>([]);
-  const [until, setUntil] = useState("");
+  const initialRule = parseRecurrenceRule(task?.recurrenceRule || null);
+  const [freq, setFreq] = useState<"day" | "week" | "month" | "year">(initialRule.frequency);
+  const [interval, setIntervalVal] = useState(initialRule.interval);
+  const [weekdays, setWeekdays] = useState<string[]>(initialRule.weekdays);
+  const [until, setUntil] = useState(initialRule.until ? initialRule.until.split("T")[0] : "");
 
   const DAYS = [
     { label: "M", value: "MON" },
@@ -42,54 +72,27 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onSubmit
     { label: "S", value: "SUN" },
   ];
 
-  function parseRecurrenceRule(ruleStr: string | null) {
-    const defaultRule = { frequency: "week" as const, interval: 1, weekdays: [] as string[], until: "" };
-    if (!ruleStr) return defaultRule;
-    try {
-      if (ruleStr.startsWith("{")) {
-        const parsed = JSON.parse(ruleStr);
-        return {
-          frequency: parsed.frequency || "week",
-          interval: parsed.interval || 1,
-          weekdays: parsed.weekdays || [],
-          until: parsed.until || "",
-        };
-      } else {
-        if (ruleStr === "DAILY") {
-          return { frequency: "day" as const, interval: 1, weekdays: [], until: "" };
-        } else if (ruleStr.startsWith("WEEKLY:")) {
-          const day = ruleStr.split(":")[1];
-          return { frequency: "week" as const, interval: 1, weekdays: [day], until: "" };
-        }
-      }
-    } catch (err) {
-      console.error("Failed to parse recurrence rule:", err);
-    }
-    return defaultRule;
+  if (task?.id !== prevTaskId) {
+    setPrevTaskId(task?.id || null);
+    setTitle(task?.title || "");
+    setDescription(task?.description || "");
+    setCategoryIds(task?.categories.map((c) => c.id) || []);
+    setPriority((task?.priority as TaskPriority) || "MEDIUM");
+    setEstimatedMin(task?.estimatedMin?.toString() || "");
+    setDueDate(task?.dueDate ? task.dueDate.split("T")[0] : "");
+    setStartTime(task?.startTime || "");
+    setEndTime(task?.endTime || "");
+    setIsFixed(task?.isFixed || false);
+    setIsRecurring(task?.isRecurring || false);
+    setIsHabit(task?.isHabit || false);
+    setHabitUnit(task?.habitUnit || "");
+
+    const parsed = parseRecurrenceRule(task?.recurrenceRule || null);
+    setFreq(parsed.frequency);
+    setIntervalVal(parsed.interval);
+    setWeekdays(parsed.weekdays);
+    setUntil(parsed.until ? parsed.until.split("T")[0] : "");
   }
-
-  useEffect(() => {
-    if (task) {
-      setTitle(task.title);
-      setDescription(task.description || "");
-      setCategoryIds(task.categories.map((c) => c.id));
-      setPriority(task.priority as TaskPriority);
-      setEstimatedMin(task.estimatedMin?.toString() || "");
-      setDueDate(task.dueDate ? task.dueDate.split("T")[0] : "");
-      setStartTime(task.startTime || "");
-      setEndTime(task.endTime || "");
-      setIsFixed(task.isFixed || false);
-      setIsRecurring(task.isRecurring || false);
-      setIsHabit(task.isHabit || false);
-      setHabitUnit(task.habitUnit || "");
-
-      const parsed = parseRecurrenceRule(task.recurrenceRule);
-      setFreq(parsed.frequency);
-      setIntervalVal(parsed.interval);
-      setWeekdays(parsed.weekdays);
-      setUntil(parsed.until ? parsed.until.split("T")[0] : "");
-    }
-  }, [task]);
 
   function toggleCategory(id: string) {
     setCategoryIds((prev) =>
@@ -227,22 +230,18 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onSubmit
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default Start Time</label>
-              <input
-                type="time"
+              <TimePicker
                 value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
+                onChange={(val) => setStartTime(val)}
                 className={inputCls}
-                step="300"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default End Time</label>
-              <input
-                type="time"
+              <TimePicker
                 value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
+                onChange={(val) => setEndTime(val)}
                 className={inputCls}
-                step="300"
               />
             </div>
           </div>
@@ -307,7 +306,7 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onSubmit
                 </select>
                 <select
                   value={freq}
-                  onChange={(e) => setFreq(e.target.value as any)}
+                  onChange={(e) => setFreq(e.target.value as "day" | "week" | "month" | "year")}
                   className="border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 bg-white dark:bg-gray-700 text-gray-950 dark:text-gray-50 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="day">day{interval > 1 && "s"}</option>

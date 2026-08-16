@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import TimePicker from "@/components/TimePicker";
 import {
   TaskDetail, TaskAction, TaskComment,
   TASK_STATUSES, TASK_PRIORITIES, STATUS_LABELS, PRIORITY_COLORS,
@@ -319,9 +320,9 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                   <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex-1">{task.title}</h1>
                   <button
                     onClick={startEditTitle}
-                    className="opacity-0 group-hover:opacity-100 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 px-2 py-1 rounded"
+                    className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-2.5 py-1 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors inline-flex items-center gap-1 cursor-pointer shrink-0"
                   >
-                    ✎
+                    <span>✎</span> <span className="text-xs">Edit</span>
                   </button>
                 </div>
               )}
@@ -332,8 +333,11 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Description</h2>
                 {!editingDesc && (
-                  <button onClick={startEditDesc} className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 px-2 py-1 rounded">
-                    ✎
+                  <button
+                    onClick={startEditDesc}
+                    className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-2.5 py-1 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>✎</span> <span className="text-xs">Edit</span>
                   </button>
                 )}
               </div>
@@ -550,7 +554,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
           </div>
 
           {/* ── Right: metadata sidebar ────────────────────────────────────── */}
-          <div className="w-64 shrink-0 space-y-4">
+          <div className="w-80 shrink-0 space-y-4">
 
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-4">
 
@@ -648,22 +652,18 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Start Time</label>
-                    <input
-                      type="time"
+                    <TimePicker
                       value={task.startTime || ""}
-                      onChange={(e) => patchTask({ startTime: e.target.value || null })}
+                      onChange={(val) => patchTask({ startTime: val || null })}
                       className={sidebarInputCls}
-                      step="300"
                     />
                   </div>
                   <div>
                     <label className="block text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">End Time</label>
-                    <input
-                      type="time"
+                    <TimePicker
                       value={task.endTime || ""}
-                      onChange={(e) => patchTask({ endTime: e.target.value || null })}
+                      onChange={(val) => patchTask({ endTime: val || null })}
                       className={sidebarInputCls}
-                      step="300"
                     />
                   </div>
                 </div>

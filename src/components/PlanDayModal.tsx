@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Board, TaskWithRelations, ScheduleWithTask, TaskPriority, PRIORITY_COLORS } from "@/types";
+import TimePicker from "./TimePicker";
 
 interface PlanDayModalProps {
   date: string;
@@ -21,13 +22,9 @@ export default function PlanDayModal({
   onClose,
 }: PlanDayModalProps) {
   // 1. Board filter selection
-  const [selectedBoardIds, setSelectedBoardIds] = useState<string[]>([]);
-
-  // Initialize selected boards with visible boards
-  useEffect(() => {
-    const visibleBoardIds = boards.filter((b) => !b.isHidden).map((b) => b.id);
-    setSelectedBoardIds(visibleBoardIds);
-  }, [boards]);
+  const [selectedBoardIds, setSelectedBoardIds] = useState<string[]>(() =>
+    boards.filter((b) => !b.isHidden).map((b) => b.id)
+  );
 
   // 2. Load candidate tasks (non-recurring, status !== DONE)
   const candidateTasks = useMemo(() => {
@@ -148,7 +145,6 @@ export default function PlanDayModal({
 
     // Second pass: Schedule Flexible Tasks (order by priority)
     sortedSelectedTasks.forEach((task) => {
-      const custom = manualTimes[task.id];
       // Skip if already scheduled in first pass
       const isAlreadyScheduled = result.some((p) => p.task.id === task.id);
       if (isAlreadyScheduled) return;
@@ -375,20 +371,16 @@ export default function PlanDayModal({
                           <div className="text-xs text-red-500 font-semibold px-2 py-1 bg-red-50 dark:bg-red-900/20 rounded">No Free Slot</div>
                         ) : (
                           <div className="flex items-center gap-1.5">
-                            <input
-                              type="time"
+                            <TimePicker
                               value={p.startTime}
-                              onChange={(e) => handleManualTimeChange(p.task.id, "startTime", e.target.value)}
+                              onChange={(val) => handleManualTimeChange(p.task.id, "startTime", val)}
                               className={sidebarInputCls}
-                              step="300"
                             />
                             <span className="text-gray-400 text-xs">—</span>
-                            <input
-                              type="time"
+                            <TimePicker
                               value={p.endTime}
-                              onChange={(e) => handleManualTimeChange(p.task.id, "endTime", e.target.value)}
+                              onChange={(val) => handleManualTimeChange(p.task.id, "endTime", val)}
                               className={sidebarInputCls}
-                              step="300"
                             />
                           </div>
                         )}

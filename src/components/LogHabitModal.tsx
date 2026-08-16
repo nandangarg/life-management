@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ScheduleWithTask } from "@/types";
+import TimePicker from "./TimePicker";
 
 interface LogHabitModalProps {
   schedule: ScheduleWithTask;
@@ -28,14 +29,23 @@ export default function LogHabitModal({ schedule, onSubmit, onClose }: LogHabitM
     return (h || 0) * 60 + (m || 0);
   };
 
-  // Recalculate duration when times change
-  useEffect(() => {
-    const start = timeToMins(startTime);
+  const handleStartTimeChange = (val: string) => {
+    setStartTime(val);
+    const start = timeToMins(val);
     const end = timeToMins(endTime);
     let diff = end - start;
-    if (diff < 0) diff += 24 * 60; // handle cross-midnight
+    if (diff < 0) diff += 24 * 60;
     setActualMin(diff);
-  }, [startTime, endTime]);
+  };
+
+  const handleEndTimeChange = (val: string) => {
+    setEndTime(val);
+    const start = timeToMins(startTime);
+    const end = timeToMins(val);
+    let diff = end - start;
+    if (diff < 0) diff += 24 * 60;
+    setActualMin(diff);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,24 +74,18 @@ export default function LogHabitModal({ schedule, onSubmit, onClose }: LogHabitM
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Actual Start Time</label>
-              <input
-                type="time"
+              <TimePicker
                 value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
+                onChange={handleStartTimeChange}
                 className={inputCls}
-                step="300"
-                required
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Actual End Time</label>
-              <input
-                type="time"
+              <TimePicker
                 value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
+                onChange={handleEndTimeChange}
                 className={inputCls}
-                step="300"
-                required
               />
             </div>
           </div>

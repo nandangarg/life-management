@@ -47,6 +47,30 @@ interface TaskTableProps {
   onAddTask?: () => void;
 }
 
+interface ThProps {
+  col: SortKey;
+  label: string;
+  className?: string;
+  sortKey: SortKey;
+  sortDir: SortDir;
+  onSort: (key: SortKey) => void;
+}
+
+function Th({ col, label, className = "", sortKey, sortDir, onSort }: ThProps) {
+  const active = sortKey === col;
+  return (
+    <th
+      onClick={() => onSort(col)}
+      className={`px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700 whitespace-nowrap ${className}`}
+    >
+      {label}
+      <span className={`ml-1 ${active ? "text-blue-600" : "text-gray-300 dark:text-gray-600"}`}>
+        {active ? (sortDir === "asc" ? "↑" : "↓") : "↕"}
+      </span>
+    </th>
+  );
+}
+
 export default function TaskTable({ tasks, categories, onAddTask }: TaskTableProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -106,21 +130,6 @@ export default function TaskTable({ tasks, categories, onAddTask }: TaskTablePro
   const hasFilters = search || filterCategory || filterStatus || filterPriority || focus;
 
   const filterInputCls = "border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500";
-
-  function Th({ col, label, className = "" }: { col: SortKey; label: string; className?: string }) {
-    const active = sortKey === col;
-    return (
-      <th
-        onClick={() => handleSort(col)}
-        className={`px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide cursor-pointer select-none hover:bg-gray-100 dark:hover:bg-gray-700 whitespace-nowrap ${className}`}
-      >
-        {label}
-        <span className={`ml-1 ${active ? "text-blue-600" : "text-gray-300 dark:text-gray-600"}`}>
-          {active ? (sortDir === "asc" ? "↑" : "↓") : "↕"}
-        </span>
-      </th>
-    );
-  }
 
   return (
     <div className="space-y-3">
@@ -209,14 +218,14 @@ export default function TaskTable({ tasks, categories, onAddTask }: TaskTablePro
           <table className="w-full text-sm">
             <thead className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
               <tr>
-                <Th col="title" label="Title" />
-                <Th col="categories" label="Categories" />
-                <Th col="status" label="Status" />
-                <Th col="priority" label="Priority" />
-                <Th col="actions" label="Actions" />
-                <Th col="dueDate" label="Due" />
-                <Th col="estimatedMin" label="Est." />
-                <Th col="createdAt" label="Created" />
+                <Th col="title" label="Title" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <Th col="categories" label="Categories" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <Th col="status" label="Status" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <Th col="priority" label="Priority" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <Th col="actions" label="Actions" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <Th col="dueDate" label="Due" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <Th col="estimatedMin" label="Est." sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                <Th col="createdAt" label="Created" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">

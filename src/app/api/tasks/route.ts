@@ -2,6 +2,22 @@ import { prisma } from "@/lib/db";
 import { transformTask } from "@/lib/transform";
 import { NextRequest, NextResponse } from "next/server";
 
+export async function GET(request: NextRequest) {
+  try {
+    const tasks = await prisma.task.findMany({
+      include: {
+        categories: { include: { category: true }, orderBy: { category: { position: "asc" } } },
+        schedules: true,
+        actions: { orderBy: { position: "asc" } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    return NextResponse.json(tasks.map(transformTask));
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to fetch tasks" }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const categoryIds: string[] = body.categoryIds ?? [];

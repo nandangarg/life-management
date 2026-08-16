@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { TaskWithRelations } from "@/types";
+import TimePicker from "./TimePicker";
 
 interface ScheduleFormProps {
   tasks: TaskWithRelations[];
@@ -59,22 +60,18 @@ export default function ScheduleForm({ tasks, date, onSubmit, onClose }: Schedul
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Time</label>
-              <input
-                type="time"
+              <TimePicker
                 value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
+                onChange={(val) => setStartTime(val)}
                 className={inputCls}
-                step="300"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Time</label>
-              <input
-                type="time"
+              <TimePicker
                 value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
+                onChange={(val) => setEndTime(val)}
                 className={inputCls}
-                step="300"
               />
             </div>
           </div>
