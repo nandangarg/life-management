@@ -72,8 +72,9 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onSubmit
     { label: "S", value: "SUN" },
   ];
 
-  if (task?.id !== prevTaskId) {
-    setPrevTaskId(task?.id || null);
+  const currentTaskId = task?.id ?? null;
+  if (currentTaskId !== prevTaskId) {
+    setPrevTaskId(currentTaskId);
     setTitle(task?.title || "");
     setDescription(task?.description || "");
     setCategoryIds(task?.categories.map((c) => c.id) || []);
