@@ -25,43 +25,89 @@ model Category {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  board Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  tasks Task[]
+  board Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks TaskCategory[]
 }
 
 model Task {
   id           String    @id @default(uuid())
   boardId      String
-  categoryId   String?
   title        String
   description  String?
-  status       String    @default("TODO")       // TODO | IN_PROGRESS | DONE
-  priority     String    @default("MEDIUM")     // LOW | MEDIUM | HIGH | URGENT
+  status       String    @default("TODO") // TODO | IN_PROGRESS | DONE
+  priority     String    @default("MEDIUM") // LOW | MEDIUM | HIGH | URGENT
   estimatedMin Int?
   dueDate      DateTime?
   position     Int       @default(0)
-  tags         String    @default("[]")         // JSON array stored as string
+  tags         String    @default("[]") // JSON array stored as string
+  startTime    String?
+  endTime      String?
+  isFixed      Boolean   @default(false)
+  isRecurring  Boolean   @default(false)
+  recurrenceRule String?   // e.g. "DAILY", "WEEKLY:MON", etc.
+  isHabit      Boolean   @default(false)
+  habitUnit    String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
   board      Board          @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  category   Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categories TaskCategory[]
   schedules  TaskSchedule[]
+  comments   TaskComment[]
+  actions    TaskAction[]
+}
+
+model TaskCategory {
+  taskId     String
+  categoryId String
+
+  task     Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, categoryId])
 }
 
 model TaskSchedule {
-  id             String    @id @default(uuid())
-  taskId         String
-  date           String    // YYYY-MM-DD stored as plain string
-  startTime      String    // HH:mm stored as plain string
-  endTime        String    // HH:mm stored as plain string
-  isFixed        Boolean   @default(false)
-  isRecurring    Boolean   @default(false)
-  recurrenceRule String?   // e.g. "WEEKLY:SUN", "DAILY"
-  completedAt    DateTime?
-  notes          String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id              String    @id @default(uuid())
+  taskId          String
+  date            String    // YYYY-MM-DD
+  startTime       String    // HH:mm
+  endTime         String    // HH:mm
+  isFixed         Boolean   @default(false)
+  isRecurring     Boolean   @default(false)
+  recurrenceRule  String?   // e.g. "WEEKLY:SUN", "DAILY"
+  completedAt     DateTime?
+  notes           String?
+  isCancelled     Boolean   @default(false)
+  actualStartTime String?
+  actualEndTime   String?
+  actualMin       Int?
+  metricValue     Float?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model TaskAction {
+  id          String    @id @default(uuid())
+  taskId      String
+  text        String
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  position    Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
@@ -72,8 +118,8 @@ model TaskSchedule {
 | Deleted model | Effect on related records |
 |---|---|
 | Board | Deletes all its Categories and Tasks (Cascade) |
-| Category | Sets `categoryId = null` on its Tasks (SetNull) |
-| Task | Deletes all its TaskSchedules (Cascade) |
+| Category | Deletes TaskCategory joins (Cascade). Tasks are NOT deleted. |
+| Task | Deletes TaskCategory joins, TaskSchedules, TaskComments, and TaskActions (Cascade) |
 
 ## TypeScript Types (`src/types/index.ts`)
 
@@ -104,7 +150,6 @@ export interface Category {
 export interface Task {
   id: string;
   boardId: string;
-  categoryId: string | null;
   title: string;
   description: string | null;
   status: TaskStatus;
@@ -112,7 +157,14 @@ export interface Task {
   estimatedMin: number | null;
   dueDate: string | null;
   position: number;
-  tags: string;        // JSON string — parse with JSON.parse(task.tags)
+  tags: string;
+  startTime: string | null;
+  endTime: string | null;
+  isFixed: boolean;
+  isRecurring: boolean;
+  recurrenceRule: string | null;
+  isHabit: boolean;
+  habitUnit: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -120,19 +172,54 @@ export interface Task {
 export interface TaskSchedule {
   id: string;
   taskId: string;
-  date: string;        // YYYY-MM-DD
-  startTime: string;   // HH:mm
-  endTime: string;     // HH:mm
+  date: string;
+  startTime: string;
+  endTime: string;
   isFixed: boolean;
   isRecurring: boolean;
   recurrenceRule: string | null;
   completedAt: string | null;
   notes: string | null;
+  isCancelled: boolean;
+  actualStartTime: string | null;
+  actualEndTime: string | null;
+  actualMin: number | null;
+  metricValue: number | null;
+}
+
+export interface TaskComment {
+  id: string;
+  taskId: string;
+  text: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskAction {
+  id: string;
+  taskId: string;
+  text: string;
+  isCompleted: boolean;
+  completedAt: string | null;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface TaskWithRelations extends Task {
-  category: Category | null;
+  categories: Category[];
   schedules: TaskSchedule[];
+  actions: TaskAction[];
+}
+
+export interface TaskDetail extends TaskWithRelations {
+  comments: TaskComment[];
+  board: {
+    id: string;
+    name: string;
+    color: string;
+    categories: Category[];
+  };
 }
 
 export interface ScheduleWithTask extends TaskSchedule {
@@ -147,7 +234,7 @@ export const TASK_STATUSES: TaskStatus[] = ["TODO", "IN_PROGRESS", "DONE"];
 export const TASK_PRIORITIES: TaskPriority[] = ["LOW", "MEDIUM", "HIGH", "URGENT"];
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
-  TODO: "To Do",
+  TODO: "To Start",
   IN_PROGRESS: "In Progress",
   DONE: "Done",
 };
