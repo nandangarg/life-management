@@ -14,7 +14,7 @@ import { AuthScreen } from "./src/screens/AuthScreen";
 import { TodayScreen } from "./src/screens/TodayScreen";
 import { TasksScreen } from "./src/screens/TasksScreen";
 import { SettingsScreen } from "./src/screens/SettingsScreen";
-import { setAuthTokenProvider } from "./src/api/client";
+import { setAuthTokenProvider, api } from "./src/api/client";
 
 const CLERK_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || "";
 
@@ -121,6 +121,7 @@ function AuthenticatedApp() {
 
   useEffect(() => {
     setAuthTokenProvider(() => getToken());
+    api.claimLegacyData().catch(() => {});
   }, [getToken]);
 
   return <MainContent />;

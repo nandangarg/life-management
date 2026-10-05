@@ -40,6 +40,8 @@ export default function Home() {
 
   useEffect(() => {
     setIsDark(localStorage.getItem("theme") === "dark");
+    // Automatically claim any legacy unassigned data to this signed-in user
+    fetch("/api/claim", { method: "POST" }).catch(() => {});
   }, []);
 
   function toggleTheme() {

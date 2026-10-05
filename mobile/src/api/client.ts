@@ -87,6 +87,10 @@ export const api = {
     }
   },
 
+  async claimLegacyData(): Promise<any> {
+    return fetchJson("/api/claim", { method: "POST" });
+  },
+
   async getBoards(): Promise<Board[]> {
     return fetchJson<Board[]>("/api/boards");
   },
