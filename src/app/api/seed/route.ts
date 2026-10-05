@@ -1,18 +1,35 @@
+import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
 
 export async function POST() {
-  // Clear existing data
-  await prisma.taskAction.deleteMany();
-  await prisma.taskComment.deleteMany();
-  await prisma.taskCategory.deleteMany();
-  await prisma.taskSchedule.deleteMany();
-  await prisma.task.deleteMany();
-  await prisma.category.deleteMany();
-  await prisma.board.deleteMany();
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Clear ONLY current user's data
+  const userTasks = await prisma.task.findMany({ where: { userId }, select: { id: true } });
+  const taskIds = userTasks.map(t => t.id);
+  const userBoards = await prisma.board.findMany({ where: { userId }, select: { id: true } });
+  const boardIds = userBoards.map(b => b.id);
+
+  if (taskIds.length > 0) {
+    await prisma.taskAction.deleteMany({ where: { taskId: { in: taskIds } } });
+    await prisma.taskComment.deleteMany({ where: { taskId: { in: taskIds } } });
+    await prisma.taskCategory.deleteMany({ where: { taskId: { in: taskIds } } });
+    await prisma.taskSchedule.deleteMany({ where: { taskId: { in: taskIds } } });
+    await prisma.task.deleteMany({ where: { id: { in: taskIds } } });
+  }
+
+  if (boardIds.length > 0) {
+    await prisma.category.deleteMany({ where: { boardId: { in: boardIds } } });
+    await prisma.board.deleteMany({ where: { id: { in: boardIds } } });
+  }
 
   const office = await prisma.board.create({
     data: {
+      userId,
       name: "Office",
       color: "#3b82f6",
       position: 0,
@@ -29,6 +46,7 @@ export async function POST() {
 
   const personal = await prisma.board.create({
     data: {
+      userId,
       name: "Personal",
       color: "#10b981",
       position: 1,
@@ -45,6 +63,7 @@ export async function POST() {
 
   const spiritual = await prisma.board.create({
     data: {
+      userId,
       name: "Spiritual",
       color: "#8b5cf6",
       position: 2,
@@ -60,6 +79,7 @@ export async function POST() {
 
   await prisma.task.create({
     data: {
+      userId,
       boardId: office.id,
       title: "Review Q2 roadmap",
       description: "Review and finalize the Q2 product roadmap",
@@ -74,6 +94,7 @@ export async function POST() {
 
   await prisma.task.create({
     data: {
+      userId,
       boardId: office.id,
       title: "Complete TypeScript course",
       status: "IN_PROGRESS",
@@ -86,6 +107,7 @@ export async function POST() {
 
   await prisma.task.create({
     data: {
+      userId,
       boardId: personal.id,
       title: "Morning run",
       status: "TODO",
@@ -98,6 +120,7 @@ export async function POST() {
 
   const sundayTask = await prisma.task.create({
     data: {
+      userId,
       boardId: spiritual.id,
       title: "Sunday Program",
       description: "Weekly Sunday program",

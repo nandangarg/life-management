@@ -11,12 +11,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const tasks = await prisma.task.findMany({
-      where: {
-        OR: [
-          { userId },
-          { userId: null },
-        ],
-      },
+      where: { userId },
       include: {
         categories: { include: { category: true }, orderBy: { category: { position: "asc" } } },
         schedules: true,
@@ -37,6 +32,14 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
+
+  const board = await prisma.board.findFirst({
+    where: { id: body.boardId, userId },
+  });
+  if (!board) {
+    return NextResponse.json({ error: "Board not found" }, { status: 404 });
+  }
+
   const categoryIds: string[] = body.categoryIds ?? [];
 
   const maxPosition = await prisma.task.aggregate({

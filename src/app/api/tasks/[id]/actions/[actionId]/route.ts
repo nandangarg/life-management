@@ -1,3 +1,4 @@
+import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -5,10 +6,24 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; actionId: string }> }
 ) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id: taskId, actionId } = await params;
   const body = await request.json();
 
-  const existing = await prisma.taskAction.findUniqueOrThrow({ where: { id: actionId } });
+  const existing = await prisma.taskAction.findFirst({
+    where: {
+      id: actionId,
+      taskId,
+      task: { userId },
+    },
+  });
+  if (!existing) {
+    return NextResponse.json({ error: "Action not found" }, { status: 404 });
+  }
 
   const data: Record<string, unknown> = {};
   if (body.text !== undefined) data.text = body.text;
@@ -37,7 +52,23 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string; actionId: string }> }
 ) {
-  const { actionId } = await params;
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id: taskId, actionId } = await params;
+  const existing = await prisma.taskAction.findFirst({
+    where: {
+      id: actionId,
+      taskId,
+      task: { userId },
+    },
+  });
+  if (!existing) {
+    return NextResponse.json({ error: "Action not found" }, { status: 404 });
+  }
+
   await prisma.taskAction.delete({ where: { id: actionId } });
   return NextResponse.json({ success: true });
 }

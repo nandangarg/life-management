@@ -11,12 +11,7 @@ export async function GET() {
   }
 
   const boards = await prisma.board.findMany({
-    where: {
-      OR: [
-        { userId },
-        { userId: null },
-      ],
-    },
+    where: { userId },
     include: {
       categories: { orderBy: { position: "asc" } },
       tasks: {

@@ -1,13 +1,24 @@
+import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { taskId, date } = body;
 
     if (!taskId || !date) {
       return NextResponse.json({ error: "Missing taskId or date" }, { status: 400 });
+    }
+
+    const task = await prisma.task.findFirst({ where: { id: taskId, userId } });
+    if (!task) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
     // Check if there is already an explicit schedule for this task on this date

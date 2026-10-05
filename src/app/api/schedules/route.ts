@@ -104,12 +104,7 @@ export async function GET(request: NextRequest) {
   const schedules = await prisma.taskSchedule.findMany({
     where: {
       ...(date ? { date, isCancelled: false } : { isCancelled: false }),
-      task: {
-        OR: [
-          { userId },
-          { userId: null },
-        ],
-      },
+      task: { userId },
     },
     include: { task: { include: taskInclude } },
     orderBy: { startTime: "asc" },
@@ -122,10 +117,7 @@ export async function GET(request: NextRequest) {
       where: {
         isRecurring: true,
         status: { not: "DONE" },
-        OR: [
-          { userId },
-          { userId: null },
-        ],
+        userId,
       },
       include: {
         categories: { include: { category: true }, orderBy: { category: { position: "asc" } } },
@@ -180,6 +172,14 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
+
+  const task = await prisma.task.findFirst({
+    where: { id: body.taskId, userId },
+  });
+  if (!task) {
+    return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  }
+
   const schedule = await prisma.taskSchedule.create({
     data: {
       taskId: body.taskId,
