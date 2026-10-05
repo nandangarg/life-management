@@ -90,12 +90,27 @@ function matchesRecurrence(task: any, dateStr: string): boolean {
   return false;
 }
 
+import { auth } from "@clerk/nextjs/server";
+
 export async function GET(request: NextRequest) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date");
 
   const schedules = await prisma.taskSchedule.findMany({
-    where: date ? { date, isCancelled: false } : { isCancelled: false },
+    where: {
+      ...(date ? { date, isCancelled: false } : { isCancelled: false }),
+      task: {
+        OR: [
+          { userId },
+          { userId: null },
+        ],
+      },
+    },
     include: { task: { include: taskInclude } },
     orderBy: { startTime: "asc" },
   });
@@ -107,6 +122,10 @@ export async function GET(request: NextRequest) {
       where: {
         isRecurring: true,
         status: { not: "DONE" },
+        OR: [
+          { userId },
+          { userId: null },
+        ],
       },
       include: {
         categories: { include: { category: true }, orderBy: { category: { position: "asc" } } },
@@ -155,6 +174,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await request.json();
   const schedule = await prisma.taskSchedule.create({
     data: {

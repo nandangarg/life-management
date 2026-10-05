@@ -17,6 +17,7 @@
     "seed": "npx jiti prisma/seed.ts"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.9.10",
     "@prisma/adapter-better-sqlite3": "^7.6.0",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.6.0",

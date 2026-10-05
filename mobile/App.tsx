@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,10 +7,16 @@ import {
   StatusBar,
 } from "react-native";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
+import { ClerkProvider, ClerkLoaded, SignedIn, SignedOut, useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
+import { tokenCache } from "./src/lib/tokenCache";
+import { AuthScreen } from "./src/screens/AuthScreen";
 import { TodayScreen } from "./src/screens/TodayScreen";
 import { TasksScreen } from "./src/screens/TasksScreen";
 import { SettingsScreen } from "./src/screens/SettingsScreen";
+import { setAuthTokenProvider } from "./src/api/client";
+
+const CLERK_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || "";
 
 type Tab = "today" | "tasks" | "settings";
 
@@ -110,10 +116,32 @@ function MainContent() {
   );
 }
 
+function AuthenticatedApp() {
+  const { getToken } = useAuth();
+
+  useEffect(() => {
+    setAuthTokenProvider(() => getToken());
+  }, [getToken]);
+
+  return <MainContent />;
+}
+
 export default function App() {
   return (
     <SafeAreaProvider>
-      <MainContent />
+      <ClerkProvider
+        publishableKey={CLERK_PUBLISHABLE_KEY}
+        tokenCache={tokenCache}
+      >
+        <ClerkLoaded>
+          <SignedIn>
+            <AuthenticatedApp />
+          </SignedIn>
+          <SignedOut>
+            <AuthScreen />
+          </SignedOut>
+        </ClerkLoaded>
+      </ClerkProvider>
     </SafeAreaProvider>
   );
 }

@@ -36,14 +36,30 @@ export async function setApiUrl(url: string): Promise<void> {
   }
 }
 
+let getAuthTokenFn: (() => Promise<string | null>) | null = null;
+
+export function setAuthTokenProvider(fn: () => Promise<string | null>) {
+  getAuthTokenFn = fn;
+}
+
 async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const baseUrl = await getApiUrl();
   const url = `${baseUrl}${endpoint.startsWith("/") ? "" : "/"}${endpoint}`;
+
+  let token: string | null = null;
+  try {
+    if (getAuthTokenFn) {
+      token = await getAuthTokenFn();
+    }
+  } catch (err) {
+    console.warn("Failed retrieving auth token:", err);
+  }
 
   const res = await fetch(url, {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options?.headers || {}),
     },
   });

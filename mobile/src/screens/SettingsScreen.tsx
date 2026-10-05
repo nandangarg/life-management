@@ -12,9 +12,12 @@ import {
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useUser, useAuth } from "@clerk/clerk-expo";
 import { getApiUrl, setApiUrl, api, DEFAULT_API_URL } from "../api/client";
 
 export function SettingsScreen() {
+  const { user } = useUser();
+  const { signOut } = useAuth();
   const [urlInput, setUrlInput] = useState("");
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{
@@ -123,6 +126,29 @@ export function SettingsScreen() {
             </View>
           )}
         </View>
+
+        {/* Account Info Card */}
+        {user && (
+          <View style={styles.card}>
+            <View style={styles.iconCircle}>
+              <Ionicons name="person" size={26} color="#6366f1" />
+            </View>
+            <Text style={styles.cardTitle}>Signed In</Text>
+            <Text style={styles.cardSubtitle}>
+              {user.primaryEmailAddress?.emailAddress || user.username || "Authenticated user"}
+            </Text>
+
+            <TouchableOpacity
+              style={[
+                styles.saveBtn,
+                { marginTop: 16, backgroundColor: "#ef444420", borderWidth: 1, borderColor: "#ef444460" },
+              ]}
+              onPress={() => signOut()}
+            >
+              <Text style={[styles.saveBtnText, { color: "#ef4444" }]}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Tips & Instructions Card */}
         <View style={styles.infoCard}>

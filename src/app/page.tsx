@@ -12,6 +12,7 @@ import ScheduleForm from "@/components/ScheduleForm";
 import PlanDayModal from "@/components/PlanDayModal";
 import HabitsView from "@/components/HabitsView";
 import LogHabitModal from "@/components/LogHabitModal";
+import { UserButton } from "@clerk/nextjs";
 
 type Tab = "tasks" | "kanban" | "calendar" | "habits" | "settings";
 
@@ -428,6 +429,9 @@ export default function Home() {
               </button>
             ))}
           </nav>
+          <div className="shrink-0 flex items-center ml-2">
+            <UserButton />
+          </div>
         </div>
       </header>
 

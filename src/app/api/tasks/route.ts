@@ -1,10 +1,22 @@
+import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db";
 import { transformTask } from "@/lib/transform";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const tasks = await prisma.task.findMany({
+      where: {
+        OR: [
+          { userId },
+          { userId: null },
+        ],
+      },
       include: {
         categories: { include: { category: true }, orderBy: { category: { position: "asc" } } },
         schedules: true,
@@ -19,6 +31,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await request.json();
   const categoryIds: string[] = body.categoryIds ?? [];
 
@@ -29,6 +46,7 @@ export async function POST(request: NextRequest) {
 
   const task = await prisma.task.create({
     data: {
+      userId,
       boardId: body.boardId,
       title: body.title,
       description: body.description || null,
