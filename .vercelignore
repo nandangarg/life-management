@@ -1,0 +1,4 @@
+mobile
+dev.db
+prisma/backup.json
+prisma/migrations_sqlite_backup
