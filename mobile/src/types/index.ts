@@ -113,3 +113,21 @@ export interface TaskDetail extends TaskWithRelations {
 export interface ScheduleWithTask extends TaskSchedule {
   task: TaskWithRelations;
 }
+
+export interface TimeLog {
+  id: string;
+  userId: string | null;
+  taskId: string | null;
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  durationMin: number;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TimeLogWithTask extends TimeLog {
+  task: (Task & { board: { id: string; name: string; color: string } }) | null;
+}

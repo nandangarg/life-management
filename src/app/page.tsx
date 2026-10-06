@@ -12,9 +12,10 @@ import ScheduleForm from "@/components/ScheduleForm";
 import PlanDayModal from "@/components/PlanDayModal";
 import HabitsView from "@/components/HabitsView";
 import LogHabitModal from "@/components/LogHabitModal";
+import DailyLogView from "@/components/DailyLogView";
 import { UserButton } from "@clerk/nextjs";
 
-type Tab = "tasks" | "kanban" | "calendar" | "habits" | "settings";
+type Tab = "tasks" | "kanban" | "calendar" | "daily-log" | "habits" | "settings";
 
 const BOARD_KEY = "life-manager-active-board";
 
@@ -385,6 +386,7 @@ export default function Home() {
     tasks: "Tasks",
     kanban: "Kanban",
     calendar: "Calendar",
+    "daily-log": "Daily Log",
     habits: "Habits",
     settings: "Settings",
   };
@@ -489,6 +491,16 @@ export default function Home() {
             onPlanDay={() => setShowPlanDayModal(true)}
             onMarkComplete={handleMarkComplete}
             onDeleteSchedule={handleDeleteSchedule}
+          />
+        )}
+
+        {/* Daily Log tab */}
+        {activeTab === "daily-log" && (
+          <DailyLogView
+            date={calendarDate}
+            onDateChange={setCalendarDate}
+            boards={boards}
+            schedules={schedules}
           />
         )}
 

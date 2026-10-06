@@ -13,12 +13,13 @@ import { tokenCache } from "./src/lib/tokenCache";
 import { AuthScreen } from "./src/screens/AuthScreen";
 import { TodayScreen } from "./src/screens/TodayScreen";
 import { TasksScreen } from "./src/screens/TasksScreen";
+import { DailyLogScreen } from "./src/screens/DailyLogScreen";
 import { SettingsScreen } from "./src/screens/SettingsScreen";
 import { setAuthTokenProvider, api } from "./src/api/client";
 
 const CLERK_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY || "";
 
-type Tab = "today" | "tasks" | "settings";
+type Tab = "today" | "tasks" | "log" | "settings";
 
 function MainContent() {
   const [activeTab, setActiveTab] = useState<Tab>("today");
@@ -38,7 +39,13 @@ function MainContent() {
             <Text style={styles.brandTitle}>Life Management</Text>
           </View>
           <Text style={styles.screenTitle}>
-            {activeTab === "today" ? "Today's Agenda" : activeTab === "tasks" ? "Task Boards" : "Settings"}
+            {activeTab === "today"
+              ? "Today's Agenda"
+              : activeTab === "tasks"
+              ? "Task Boards"
+              : activeTab === "log"
+              ? "Daily Log & Journal"
+              : "Settings"}
           </Text>
         </View>
 
@@ -62,6 +69,7 @@ function MainContent() {
           <TodayScreen onOpenSettings={() => setActiveTab("settings")} />
         )}
         {activeTab === "tasks" && <TasksScreen />}
+        {activeTab === "log" && <DailyLogScreen />}
         {activeTab === "settings" && <SettingsScreen />}
       </View>
 
@@ -94,6 +102,21 @@ function MainContent() {
           />
           <Text style={[styles.tabLabel, activeTab === "tasks" && styles.tabLabelActive]}>
             Tasks
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.tabButton}
+          onPress={() => setActiveTab("log")}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name={activeTab === "log" ? "journal" : "journal-outline"}
+            size={22}
+            color={activeTab === "log" ? "#6366f1" : "#64748b"}
+          />
+          <Text style={[styles.tabLabel, activeTab === "log" && styles.tabLabelActive]}>
+            Daily Log
           </Text>
         </TouchableOpacity>
 

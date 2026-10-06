@@ -154,4 +154,36 @@ export const api = {
       body: JSON.stringify({ text }),
     });
   },
+
+  async getTimeLogs(date?: string): Promise<any[]> {
+    return fetchJson<any[]>(`/api/logs${date ? `?date=${date}` : ""}`);
+  },
+
+  async createTimeLog(data: {
+    title: string;
+    taskId?: string | null;
+    date: string;
+    startTime: string;
+    endTime: string;
+    durationMin?: number;
+    notes?: string | null;
+  }): Promise<any> {
+    return fetchJson("/api/logs", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateTimeLog(id: string, data: Partial<any>): Promise<any> {
+    return fetchJson(`/api/logs/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteTimeLog(id: string): Promise<any> {
+    return fetchJson(`/api/logs/${id}`, {
+      method: "DELETE",
+    });
+  },
 };
