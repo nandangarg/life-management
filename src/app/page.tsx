@@ -419,7 +419,7 @@ export default function Home() {
 
           {/* Tab nav */}
           <nav className="flex gap-1 ml-auto">
-            {(["tasks", "kanban", "calendar", "habits", "settings"] as Tab[]).map(tab => (
+            {(["tasks", "kanban", "calendar", "daily-log", "habits", "settings"] as Tab[]).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
