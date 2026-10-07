@@ -36,6 +36,8 @@ export default function Home() {
   const [showPlanDayModal, setShowPlanDayModal] = useState(false);
   const [loggingSchedule, setLoggingSchedule] = useState<ScheduleWithTask | null>(null);
   const [editingTask, setEditingTask] = useState<TaskWithRelations | null>(null);
+  const [scheduleSlotTimes, setScheduleSlotTimes] = useState<{ startTime: string; endTime: string } | null>(null);
+  const [schedulingNewTaskWithTimes, setSchedulingNewTaskWithTimes] = useState<{ startTime: string; endTime: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDark, setIsDark] = useState(false);
 
@@ -185,14 +187,55 @@ export default function Home() {
         body: JSON.stringify(data),
       });
     } else {
-      await fetch("/api/tasks", {
+      const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...data, boardId: activeBoardId }),
       });
+      if (schedulingNewTaskWithTimes && res.ok) {
+        const newTask = await res.json();
+        await fetch("/api/schedules", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            taskId: newTask.id,
+            date: calendarDate,
+            startTime: schedulingNewTaskWithTimes.startTime,
+            endTime: schedulingNewTaskWithTimes.endTime,
+          }),
+        });
+        setSchedulingNewTaskWithTimes(null);
+        fetchSchedules();
+      }
     }
     setShowTaskForm(false);
     setEditingTask(null);
+    fetchBoards();
+  };
+
+  const handleOpenSchedule = (startTime?: string, endTime?: string) => {
+    setScheduleSlotTimes({
+      startTime: startTime || "09:00",
+      endTime: endTime || "09:30",
+    });
+    setShowScheduleForm(true);
+  };
+
+  const handleAddNewTaskAndSchedule = (startTime?: string, endTime?: string) => {
+    setSchedulingNewTaskWithTimes({
+      startTime: startTime || "09:00",
+      endTime: endTime || "09:30",
+    });
+    setEditingTask(null);
+    setShowTaskForm(true);
+  };
+
+  const handleQuickTaskCreate = async (title: string, boardId: string) => {
+    await fetch("/api/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, boardId }),
+    });
     fetchBoards();
   };
 
@@ -486,8 +529,12 @@ export default function Home() {
           <CalendarView
             date={calendarDate}
             schedules={schedules}
+            boards={boards}
+            activeBoardId={activeBoardId}
             onDateChange={setCalendarDate}
-            onAddSchedule={() => setShowScheduleForm(true)}
+            onAddSchedule={handleOpenSchedule}
+            onAddNewTaskAndSchedule={handleAddNewTaskAndSchedule}
+            onQuickTaskCreate={handleQuickTaskCreate}
             onPlanDay={() => setShowPlanDayModal(true)}
             onMarkComplete={handleMarkComplete}
             onDeleteSchedule={handleDeleteSchedule}
@@ -563,9 +610,16 @@ export default function Home() {
           boardId={activeBoard.id}
           categories={activeBoard.categories}
           task={editingTask}
+          initialDueDate={schedulingNewTaskWithTimes ? calendarDate : undefined}
+          initialStartTime={schedulingNewTaskWithTimes?.startTime}
+          initialEndTime={schedulingNewTaskWithTimes?.endTime}
           onSubmit={handleTaskSubmit}
           onSubmitAndEdit={handleTaskSubmitAndEdit}
-          onClose={() => { setShowTaskForm(false); setEditingTask(null); }}
+          onClose={() => {
+            setShowTaskForm(false);
+            setEditingTask(null);
+            setSchedulingNewTaskWithTimes(null);
+          }}
         />
       )}
 
@@ -573,9 +627,21 @@ export default function Home() {
       {showScheduleForm && (
         <ScheduleForm
           tasks={allTasks}
+          boards={boards}
+          defaultBoardId={activeBoardId}
           date={calendarDate}
+          initialStartTime={scheduleSlotTimes?.startTime || "09:00"}
+          initialEndTime={scheduleSlotTimes?.endTime || "09:30"}
           onSubmit={handleScheduleSubmit}
-          onClose={() => setShowScheduleForm(false)}
+          onOpenTaskForm={(s, e) => {
+            setShowScheduleForm(false);
+            handleAddNewTaskAndSchedule(s, e);
+          }}
+          onTaskCreated={fetchBoards}
+          onClose={() => {
+            setShowScheduleForm(false);
+            setScheduleSlotTimes(null);
+          }}
         />
       )}
 

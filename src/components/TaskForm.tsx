@@ -8,6 +8,9 @@ interface TaskFormProps {
   boardId: string;
   categories: Category[];
   task?: TaskWithRelations | null;
+  initialDueDate?: string;
+  initialStartTime?: string;
+  initialEndTime?: string;
   onSubmit: (data: Record<string, unknown>) => void;
   onSubmitAndEdit?: (data: Record<string, unknown>) => void;
   onClose: () => void;
@@ -39,7 +42,17 @@ function parseRecurrenceRule(ruleStr: string | null) {
   return defaultRule;
 }
 
-export default function TaskForm({ boardId, categories, task, onSubmit, onSubmitAndEdit, onClose }: TaskFormProps) {
+export default function TaskForm({
+  boardId,
+  categories,
+  task,
+  initialDueDate,
+  initialStartTime,
+  initialEndTime,
+  onSubmit,
+  onSubmitAndEdit,
+  onClose,
+}: TaskFormProps) {
   const [prevTaskId, setPrevTaskId] = useState<string | null>(task?.id || null);
 
   const [title, setTitle] = useState(task?.title || "");
@@ -47,9 +60,11 @@ export default function TaskForm({ boardId, categories, task, onSubmit, onSubmit
   const [categoryIds, setCategoryIds] = useState<string[]>(task?.categories.map((c) => c.id) || []);
   const [priority, setPriority] = useState<TaskPriority>((task?.priority as TaskPriority) || "MEDIUM");
   const [estimatedMin, setEstimatedMin] = useState(task?.estimatedMin?.toString() || "");
-  const [dueDate, setDueDate] = useState(task?.dueDate ? task.dueDate.split("T")[0] : "");
-  const [startTime, setStartTime] = useState(task?.startTime || "");
-  const [endTime, setEndTime] = useState(task?.endTime || "");
+  const [dueDate, setDueDate] = useState(
+    task?.dueDate ? task.dueDate.split("T")[0] : initialDueDate || ""
+  );
+  const [startTime, setStartTime] = useState(task?.startTime || initialStartTime || "");
+  const [endTime, setEndTime] = useState(task?.endTime || initialEndTime || "");
   const [isFixed, setIsFixed] = useState(task?.isFixed || false);
   const [isRecurring, setIsRecurring] = useState(task?.isRecurring || false);
   const [isHabit, setIsHabit] = useState(task?.isHabit || false);
