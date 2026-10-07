@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { Board, ScheduleWithTask, TimeLogWithTask } from "@/types";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Board, ScheduleWithTask, TimeLogWithTask, PRIORITY_COLORS, TaskPriority } from "@/types";
 import LogWorkModal from "./LogWorkModal";
 
 interface DailyLogViewProps {
@@ -44,6 +44,24 @@ export default function DailyLogView({
   const [quickTitle, setQuickTitle] = useState("");
   const [quickTaskId, setQuickTaskId] = useState("");
   const [editingStartTime, setEditingStartTime] = useState(false);
+
+  // Searchable Task Combobox state
+  const [taskSearchQuery, setTaskSearchQuery] = useState("");
+  const [isTaskDropdownOpen, setIsTaskDropdownOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const taskDropdownRef = useRef<HTMLDivElement>(null);
+  const taskSearchInputRef = useRef<HTMLInputElement>(null);
+
+  // Dismiss dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (taskDropdownRef.current && !taskDropdownRef.current.contains(event.target as Node)) {
+        setIsTaskDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Load active work stash on mount
   useEffect(() => {
@@ -216,9 +234,76 @@ export default function DailyLogView({
     return schedules.filter((s) => s.date === date);
   }, [schedules, date]);
 
-  const allTasks = useMemo(() => {
-    return boards.flatMap((b) => b.tasks);
+  const allTasksWithBoard = useMemo(() => {
+    return boards.flatMap((b) =>
+      b.tasks.map((t) => ({
+        ...t,
+        boardName: b.name,
+        boardColor: b.color,
+      }))
+    );
   }, [boards]);
+
+  const filteredTasks = useMemo(() => {
+    if (!taskSearchQuery.trim()) return allTasksWithBoard;
+    const q = taskSearchQuery.toLowerCase();
+    return allTasksWithBoard.filter(
+      (t) =>
+        t.title.toLowerCase().includes(q) ||
+        t.boardName.toLowerCase().includes(q) ||
+        t.categories?.some((c) => c.name.toLowerCase().includes(q))
+    );
+  }, [allTasksWithBoard, taskSearchQuery]);
+
+  const selectedTask = useMemo(() => {
+    if (!quickTaskId) return null;
+    return allTasksWithBoard.find((t) => t.id === quickTaskId) || null;
+  }, [allTasksWithBoard, quickTaskId]);
+
+  const handleSelectTask = (taskId: string) => {
+    setQuickTaskId(taskId);
+    setIsTaskDropdownOpen(false);
+    setTaskSearchQuery("");
+    if (taskId) {
+      const t = allTasksWithBoard.find((item) => item.id === taskId);
+      if (t) setQuickTitle(t.title);
+    }
+  };
+
+  const handleClearTask = () => {
+    setQuickTaskId("");
+    setTaskSearchQuery("");
+    setTimeout(() => {
+      taskSearchInputRef.current?.focus();
+      setIsTaskDropdownOpen(true);
+    }, 50);
+  };
+
+  const handleTaskKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isTaskDropdownOpen) {
+      if (e.key === "ArrowDown" || e.key === "Enter") {
+        setIsTaskDropdownOpen(true);
+      }
+      return;
+    }
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev + 1) % (filteredTasks.length + 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev - 1 + filteredTasks.length + 1) % (filteredTasks.length + 1));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (highlightedIndex === 0) {
+        handleSelectTask("");
+      } else if (filteredTasks[highlightedIndex - 1]) {
+        handleSelectTask(filteredTasks[highlightedIndex - 1].id);
+      }
+    } else if (e.key === "Escape") {
+      setIsTaskDropdownOpen(false);
+    }
+  };
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -342,24 +427,115 @@ export default function DailyLogView({
               placeholder="What are you starting to work on? (e.g. Q2 Roadmap, Customer Call...)"
               className="flex-1 border border-gray-300 dark:border-gray-600 rounded-xl px-3.5 py-2 text-sm bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
-            <select
-              value={quickTaskId}
-              onChange={(e) => {
-                setQuickTaskId(e.target.value);
-                if (e.target.value) {
-                  const t = allTasks.find((item) => item.id === e.target.value);
-                  if (t) setQuickTitle(t.title);
-                }
-              }}
-              className="border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 text-xs bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 focus:outline-none max-w-xs"
-            >
-              <option value="">— Or pick task —</option>
-              {allTasks.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.title}
-                </option>
-              ))}
-            </select>
+            {/* Searchable Task Combobox */}
+            <div ref={taskDropdownRef} className="relative sm:w-64 shrink-0">
+              {selectedTask ? (
+                <div className="flex items-center justify-between border border-emerald-300 dark:border-emerald-600 bg-emerald-50/60 dark:bg-emerald-900/20 rounded-xl px-3 py-2 text-xs">
+                  <div className="flex items-center gap-1.5 truncate flex-1 min-w-0">
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: selectedTask.boardColor || "#10b981" }}
+                    />
+                    <span className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                      {selectedTask.title}
+                    </span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 shrink-0">
+                      ({selectedTask.boardName})
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleClearTask}
+                    className="text-gray-400 hover:text-red-500 text-xs px-1.5 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ml-1 shrink-0 cursor-pointer"
+                    title="Change task"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <input
+                    ref={taskSearchInputRef}
+                    type="text"
+                    value={taskSearchQuery}
+                    onChange={(e) => {
+                      setTaskSearchQuery(e.target.value);
+                      setIsTaskDropdownOpen(true);
+                      setHighlightedIndex(1);
+                    }}
+                    onFocus={() => setIsTaskDropdownOpen(true)}
+                    onKeyDown={handleTaskKeyDown}
+                    placeholder="— Or pick / search task —"
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 pr-7 text-xs bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                  />
+                  <span className="absolute right-2.5 top-2.5 text-gray-400 text-xs pointer-events-none">
+                    🔍
+                  </span>
+                </div>
+              )}
+
+              {/* Floating Filtered Results Dropdown */}
+              {!selectedTask && isTaskDropdownOpen && (
+                <div className="absolute top-full right-0 left-0 sm:left-auto sm:w-80 mt-1 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 max-h-64 overflow-y-auto z-50 divide-y divide-gray-100 dark:divide-gray-700/60">
+                  {/* Clear option */}
+                  <div
+                    onClick={() => handleSelectTask("")}
+                    className={`px-3 py-2 text-xs font-semibold cursor-pointer transition-colors ${
+                      highlightedIndex === 0
+                        ? "bg-emerald-50 dark:bg-emerald-900/40 text-emerald-900 dark:text-emerald-200"
+                        : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+                    }`}
+                  >
+                    — No specific task (Ad-hoc) —
+                  </div>
+
+                  {/* Filtered Task Results */}
+                  {filteredTasks.length > 0 ? (
+                    <div className="py-1">
+                      {filteredTasks.map((t, idx) => {
+                        const isHighlighted = idx + 1 === highlightedIndex;
+                        return (
+                          <div
+                            key={t.id}
+                            onClick={() => handleSelectTask(t.id)}
+                            className={`px-3 py-2 flex items-center justify-between text-xs cursor-pointer transition-colors ${
+                              isHighlighted
+                                ? "bg-emerald-50 dark:bg-emerald-900/40 text-emerald-900 dark:text-emerald-100"
+                                : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 truncate flex-1 min-w-0">
+                              <span
+                                className="w-2 h-2 rounded-full shrink-0"
+                                style={{ backgroundColor: t.boardColor || "#10b981" }}
+                              />
+                              <span className="font-medium truncate">{t.title}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                                {t.boardName}
+                              </span>
+                              <span
+                                className="text-[10px] font-bold"
+                                style={{
+                                  color: PRIORITY_COLORS[t.priority as TaskPriority] || "#6b7280",
+                                }}
+                              >
+                                {t.priority}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="p-3 text-center text-xs text-gray-400">
+                      No matching tasks found for &quot;{taskSearchQuery}&quot;
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           <button
             onClick={handleStartActivity}
