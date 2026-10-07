@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Board, TimeLogWithTask, PRIORITY_COLORS, TaskPriority } from "@/types";
+import { Board, ScheduleWithTask, TimeLogWithTask, PRIORITY_COLORS, TaskPriority } from "@/types";
 import TimePicker from "./TimePicker";
 
 interface LogWorkModalProps {
@@ -20,6 +20,7 @@ interface LogWorkModalProps {
   initialLog?: Partial<TimeLogWithTask> | null;
   defaultDate: string;
   boards: Board[];
+  schedules?: ScheduleWithTask[];
 }
 
 function getNowTimeStr(): string {
@@ -51,6 +52,7 @@ export default function LogWorkModal({
   initialLog,
   defaultDate,
   boards,
+  schedules = [],
 }: LogWorkModalProps) {
   const allTasks = useMemo(() => {
     return boards.flatMap((b) =>
@@ -125,6 +127,41 @@ export default function LogWorkModal({
       const task = allTasks.find((t) => t.id === taskId);
       if (task) {
         setTitle(task.title);
+
+        // Check if there is a matching schedule for this task on the selected date
+        const matchingSchedule = schedules?.find(
+          (s) => s.taskId === taskId && s.date === date
+        );
+
+        if (matchingSchedule?.startTime && matchingSchedule?.endTime) {
+          setStartTime(matchingSchedule.startTime);
+          setEndTime(matchingSchedule.endTime);
+          const diff = calcDiffMin(matchingSchedule.startTime, matchingSchedule.endTime);
+          setDurationMin(diff > 0 ? diff : (task.estimatedMin || 30));
+        } else if (task.startTime) {
+          // Task has fixed/default start time
+          setStartTime(task.startTime);
+          if (task.endTime) {
+            setEndTime(task.endTime);
+            const diff = calcDiffMin(task.startTime, task.endTime);
+            setDurationMin(diff > 0 ? diff : (task.estimatedMin || 30));
+          } else if (task.estimatedMin) {
+            const startM = timeToMins(task.startTime);
+            const endM = (startM + task.estimatedMin) % (24 * 60);
+            const endHStr = Math.floor(endM / 60).toString().padStart(2, "0");
+            const endMStr = (endM % 60).toString().padStart(2, "0");
+            setEndTime(`${endHStr}:${endMStr}`);
+            setDurationMin(task.estimatedMin);
+          }
+        } else if (task.estimatedMin) {
+          // If no specific start time, but estimated duration exists, adjust duration
+          setDurationMin(task.estimatedMin);
+          const startM = timeToMins(startTime);
+          const endM = (startM + task.estimatedMin) % (24 * 60);
+          const endHStr = Math.floor(endM / 60).toString().padStart(2, "0");
+          const endMStr = (endM % 60).toString().padStart(2, "0");
+          setEndTime(`${endHStr}:${endMStr}`);
+        }
       }
     }
   };

@@ -754,6 +754,7 @@ export default function DailyLogView({
         initialLog={editingLog}
         defaultDate={date}
         boards={boards}
+        schedules={schedules}
       />
     </div>
   );

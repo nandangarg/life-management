@@ -166,7 +166,7 @@ export default function TimePicker({
   };
 
   // Preset shortcuts
-  const applyPreset = (preset: "now" | "-15m" | "+15m" | "+30m" | "+1h") => {
+  const applyPreset = (preset: "now" | "-1h" | "-30m" | "-15m" | "+15m") => {
     if (preset === "now") {
       const now = new Date();
       const h = now.getHours();
@@ -178,10 +178,10 @@ export default function TimePicker({
     }
 
     let totalMinutes = hour24 * 60 + min;
+    if (preset === "-1h") totalMinutes -= 60;
+    if (preset === "-30m") totalMinutes -= 30;
     if (preset === "-15m") totalMinutes -= 15;
     if (preset === "+15m") totalMinutes += 15;
-    if (preset === "+30m") totalMinutes += 30;
-    if (preset === "+1h") totalMinutes += 60;
 
     totalMinutes = (totalMinutes + 24 * 60) % (24 * 60);
     const newH = Math.floor(totalMinutes / 60);
@@ -305,7 +305,7 @@ export default function TimePicker({
             resolvedAlign === "right" ? "right-0" : "left-0"
           }`}
         >
-          {/* 1-Tap Quick Presets Bar */}
+          {/* 1-Tap Quick Presets Bar: Prioritizing Past Times for Work Logging */}
           <div className="flex items-center justify-between gap-1 pb-1.5 border-b border-gray-100 dark:border-gray-700/80">
             <button
               type="button"
@@ -316,31 +316,35 @@ export default function TimePicker({
             </button>
             <button
               type="button"
+              onClick={() => applyPreset("-1h")}
+              className="px-1.5 py-0.5 text-[11px] font-medium rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+              title="Subtract 1 hour"
+            >
+              -1h
+            </button>
+            <button
+              type="button"
+              onClick={() => applyPreset("-30m")}
+              className="px-1.5 py-0.5 text-[11px] font-medium rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+              title="Subtract 30 minutes"
+            >
+              -30m
+            </button>
+            <button
+              type="button"
               onClick={() => applyPreset("-15m")}
-              className="px-1 py-0.5 text-[11px] font-medium rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+              className="px-1.5 py-0.5 text-[11px] font-medium rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+              title="Subtract 15 minutes"
             >
               -15m
             </button>
             <button
               type="button"
               onClick={() => applyPreset("+15m")}
-              className="px-1 py-0.5 text-[11px] font-medium rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+              className="px-1.5 py-0.5 text-[11px] font-medium rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+              title="Add 15 minutes"
             >
               +15m
-            </button>
-            <button
-              type="button"
-              onClick={() => applyPreset("+30m")}
-              className="px-1 py-0.5 text-[11px] font-medium rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
-            >
-              +30m
-            </button>
-            <button
-              type="button"
-              onClick={() => applyPreset("+1h")}
-              className="px-1 py-0.5 text-[11px] font-medium rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
-            >
-              +1h
             </button>
           </div>
 
