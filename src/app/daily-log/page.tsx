@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Dashboard from "@/components/Dashboard";
 
 export const metadata: Metadata = {
-  title: "Tasks | Life Manager",
+  title: "Daily Log | Life Manager",
 };
 
-export default function TasksPage() {
-  return <Dashboard initialTab="tasks" />;
+export default function DailyLogPage() {
+  return <Dashboard initialTab="daily-log" />;
 }

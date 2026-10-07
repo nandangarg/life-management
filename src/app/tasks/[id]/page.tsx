@@ -279,7 +279,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
               ← Back
             </button>
             <span className="text-gray-300 dark:text-gray-600">|</span>
-            <Link href="/" className="hover:text-gray-800 dark:hover:text-gray-100 inline-flex items-center gap-1.5">
+            <Link href="/tasks" className="hover:text-gray-800 dark:hover:text-gray-100 inline-flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full" style={{ backgroundColor: task.board.color }} />
               {task.board.name}
             </Link>
