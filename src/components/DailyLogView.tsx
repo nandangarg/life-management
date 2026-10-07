@@ -28,6 +28,20 @@ function getNowTimeStr(): string {
   return `${h}:${mStr}`;
 }
 
+function timeToMins(timeStr: string): number {
+  if (!timeStr || !timeStr.includes(":")) return 0;
+  const [h, m] = timeStr.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+function calcDiffMin(start: string, end: string): number {
+  const s = timeToMins(start);
+  const e = timeToMins(end);
+  let diff = e - s;
+  if (diff < 0) diff += 24 * 60;
+  return diff;
+}
+
 export default function DailyLogView({
   date,
   onDateChange,
@@ -44,6 +58,7 @@ export default function DailyLogView({
   const [quickTitle, setQuickTitle] = useState("");
   const [quickTaskId, setQuickTaskId] = useState("");
   const [editingStartTime, setEditingStartTime] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
 
   // Searchable Task Combobox state
   const [taskSearchQuery, setTaskSearchQuery] = useState("");
@@ -130,24 +145,36 @@ export default function DailyLogView({
     setQuickTaskId("");
   };
 
-  // Stop & Log action
-  const handleStopAndLog = () => {
-    if (!activeStash) return;
-    setEditingLog({
-      id: "",
-      title: activeStash.title,
-      taskId: activeStash.taskId || null,
-      date: activeStash.startDate,
-      startTime: activeStash.startTime,
-      endTime: getNowTimeStr(),
-      durationMin: 0,
-      notes: null,
-      userId: null,
-      createdAt: "",
-      updatedAt: "",
-      task: null,
-    });
-    setModalOpen(true);
+  // Stop & Log action - immediately persists with finish time, zero modal
+  const handleStopAndLog = async () => {
+    if (!activeStash || isStopping) return;
+    setIsStopping(true);
+    const nowTime = getNowTimeStr();
+    const diff = calcDiffMin(activeStash.startTime, nowTime);
+
+    try {
+      const res = await fetch("/api/logs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: activeStash.title,
+          taskId: activeStash.taskId || null,
+          date: activeStash.startDate,
+          startTime: activeStash.startTime,
+          endTime: nowTime,
+          durationMin: diff > 0 ? diff : 1,
+          notes: null,
+        }),
+      });
+      if (res.ok) {
+        saveStash(null);
+        fetchLogs();
+      }
+    } catch (err) {
+      console.error("Failed to stop and log work:", err);
+    } finally {
+      setIsStopping(false);
+    }
   };
 
   // Save log (new or edit)
@@ -408,9 +435,10 @@ export default function DailyLogView({
             </button>
             <button
               onClick={handleStopAndLog}
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+              disabled={isStopping}
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
             >
-              <span>⏹</span> Stop & Log Work
+              <span>⏹</span> {isStopping ? "Saving..." : "Stop & Log Work"}
             </button>
           </div>
         </div>
