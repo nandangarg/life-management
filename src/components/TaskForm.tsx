@@ -160,9 +160,9 @@ export default function TaskForm({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-xl md:max-w-2xl max-h-[90vh] flex flex-col mx-4" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{task ? "Edit Task" : "New Task"}</h3>
-        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-1 flex-1">
+        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-1 flex-1 pb-20">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title *</label>
             <input
@@ -250,6 +250,7 @@ export default function TaskForm({
                 value={startTime}
                 onChange={(val) => setStartTime(val)}
                 className={inputCls}
+                align="left"
               />
             </div>
             <div>
@@ -258,6 +259,7 @@ export default function TaskForm({
                 value={endTime}
                 onChange={(val) => setEndTime(val)}
                 className={inputCls}
+                align="right"
               />
             </div>
           </div>

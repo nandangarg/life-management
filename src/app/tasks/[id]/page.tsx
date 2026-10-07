@@ -656,6 +656,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                       value={task.startTime || ""}
                       onChange={(val) => patchTask({ startTime: val || null })}
                       className={sidebarInputCls}
+                      align="left"
                     />
                   </div>
                   <div>
@@ -664,6 +665,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                       value={task.endTime || ""}
                       onChange={(val) => patchTask({ endTime: val || null })}
                       className={sidebarInputCls}
+                      align="right"
                     />
                   </div>
                 </div>

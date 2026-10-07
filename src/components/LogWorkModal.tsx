@@ -406,6 +406,7 @@ export default function LogWorkModal({
                 value={startTime}
                 onChange={handleStartTimeChange}
                 className={inputCls}
+                align="left"
               />
             </div>
 
@@ -417,6 +418,7 @@ export default function LogWorkModal({
                 value={endTime}
                 onChange={handleEndTimeChange}
                 className={inputCls}
+                align="right"
               />
             </div>
           </div>

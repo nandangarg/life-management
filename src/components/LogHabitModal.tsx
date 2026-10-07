@@ -62,7 +62,7 @@ export default function LogHabitModal({ schedule, onSubmit, onClose }: LogHabitM
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-lg mx-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-700 pb-2">
           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             🧘 Log Routine: {schedule.task.title}
@@ -78,6 +78,7 @@ export default function LogHabitModal({ schedule, onSubmit, onClose }: LogHabitM
                 value={startTime}
                 onChange={handleStartTimeChange}
                 className={inputCls}
+                align="left"
               />
             </div>
             <div>
@@ -86,6 +87,7 @@ export default function LogHabitModal({ schedule, onSubmit, onClose }: LogHabitM
                 value={endTime}
                 onChange={handleEndTimeChange}
                 className={inputCls}
+                align="right"
               />
             </div>
           </div>

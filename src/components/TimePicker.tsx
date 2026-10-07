@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect, useId } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export interface TimePickerProps {
   value: string; // "HH:MM" (24h) or ""
   onChange: (value: string) => void;
   className?: string;
   placeholder?: string;
+  align?: "left" | "right" | "auto";
 }
 
 // Parse various human-entered time strings into 24-hour { hour, min }
@@ -71,12 +72,14 @@ export default function TimePicker({
   onChange,
   className = "",
   placeholder = "e.g. 10:15 AM",
+  align = "auto",
 }: TimePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<"hour" | "minute">("hour");
   const [isEditing, setIsEditing] = useState(false);
   const [typedText, setTypedText] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+  const [resolvedAlign, setResolvedAlign] = useState<"left" | "right">("left");
 
   const containerRef = useRef<HTMLDivElement>(null);
   const clockFaceRef = useRef<HTMLDivElement>(null);
@@ -94,9 +97,33 @@ export default function TimePicker({
   }
 
   const selectedHour = hour24 % 12 === 0 ? 12 : hour24 % 12;
-  // Snap minute to nearest 5 min for dial
-  const selectedMinute = Math.round(min / 5) * 5 % 60;
+  const selectedMinute = (Math.round(min / 5) * 5) % 60;
   const isPM = hour24 >= 12;
+
+  // Compute alignment on open
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (align === "left") {
+      setResolvedAlign("left");
+      return;
+    }
+    if (align === "right") {
+      setResolvedAlign("right");
+      return;
+    }
+
+    // Auto-detect whether dropdown fits to the left or right
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      // If right edge is within 240px of screen right, align right
+      if (rect.left + 230 > window.innerWidth || rect.left > window.innerWidth / 2) {
+        setResolvedAlign("right");
+      } else {
+        setResolvedAlign("left");
+      }
+    }
+  }, [isOpen, align]);
 
   // Handle outside click to close
   useEffect(() => {
@@ -130,10 +157,9 @@ export default function TimePicker({
     if (preset === "now") {
       const now = new Date();
       const h = now.getHours();
-      const m = Math.round(now.getMinutes() / 5) * 5;
-      const finalH = m === 60 ? (h + 1) % 24 : h;
-      const finalM = m === 60 ? 0 : m;
-      const val = `${finalH.toString().padStart(2, "0")}:${finalM.toString().padStart(2, "0")}`;
+      const m = (Math.round(now.getMinutes() / 5) * 5) % 60;
+      const finalH = now.getMinutes() >= 58 ? (h + 1) % 24 : h;
+      const val = `${finalH.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
       onChange(val);
       return;
     }
@@ -159,7 +185,6 @@ export default function TimePicker({
       onChange(val);
       setTypedText(formatTime24to12(val));
     } else {
-      // Revert if invalid
       setTypedText(formatTime24to12(value));
     }
     setIsEditing(false);
@@ -182,7 +207,7 @@ export default function TimePicker({
     }
   };
 
-  // Pointer drag math on clock face
+  // Pointer drag math on clock face (180x180)
   const handleClockPointer = (e: React.PointerEvent<HTMLDivElement>) => {
     const clock = clockFaceRef.current;
     if (!clock) return;
@@ -192,7 +217,7 @@ export default function TimePicker({
     const dx = e.clientX - centerX;
     const dy = e.clientY - centerY;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < 12) return; // Ignore clicks too close to center
+    if (dist < 10) return; // Dead zone
 
     let deg = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
     deg = (deg + 360) % 360;
@@ -207,20 +232,19 @@ export default function TimePicker({
     }
   };
 
-  // Radial geometry for 200px clock circle
-  const CLOCK_RADIUS = 72; // distance from center (100, 100)
+  // Radial geometry for 180px clock circle (Center: 90, 90)
+  const CLOCK_RADIUS = 64;
   const hours = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
   const minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
-  // Calculate clock hand position
   const activeAngleDeg =
     mode === "hour"
       ? selectedHour * 30 - 90
       : (selectedMinute / 5) * 30 - 90;
 
   const handRad = (activeAngleDeg * Math.PI) / 180;
-  const handX = 100 + CLOCK_RADIUS * Math.cos(handRad);
-  const handY = 100 + CLOCK_RADIUS * Math.sin(handRad);
+  const handX = 90 + CLOCK_RADIUS * Math.cos(handRad);
+  const handY = 90 + CLOCK_RADIUS * Math.sin(handRad);
 
   return (
     <div ref={containerRef} className="relative w-full">
@@ -261,53 +285,57 @@ export default function TimePicker({
 
       {/* Zero-Scroll Hybrid Clock Wheel Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 sm:left-1/2 sm:-translate-x-1/2 mt-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl p-3 z-50 w-[240px] select-none">
+        <div
+          className={`absolute top-full mt-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl p-2.5 z-50 w-[224px] select-none ${
+            resolvedAlign === "right" ? "right-0" : "left-0"
+          }`}
+        >
           {/* 1-Tap Quick Presets Bar */}
-          <div className="flex items-center justify-between gap-1 pb-2 border-b border-gray-100 dark:border-gray-700/80">
+          <div className="flex items-center justify-between gap-1 pb-1.5 border-b border-gray-100 dark:border-gray-700/80">
             <button
               type="button"
               onClick={() => applyPreset("now")}
-              className="px-2 py-1 text-[11px] font-semibold rounded-lg bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors"
+              className="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors"
             >
               Now
             </button>
             <button
               type="button"
               onClick={() => applyPreset("-15m")}
-              className="px-1.5 py-1 text-[11px] font-medium rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+              className="px-1 py-0.5 text-[11px] font-medium rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
             >
               -15m
             </button>
             <button
               type="button"
               onClick={() => applyPreset("+15m")}
-              className="px-1.5 py-1 text-[11px] font-medium rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+              className="px-1 py-0.5 text-[11px] font-medium rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
             >
               +15m
             </button>
             <button
               type="button"
               onClick={() => applyPreset("+30m")}
-              className="px-1.5 py-1 text-[11px] font-medium rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+              className="px-1 py-0.5 text-[11px] font-medium rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
             >
               +30m
             </button>
             <button
               type="button"
               onClick={() => applyPreset("+1h")}
-              className="px-1.5 py-1 text-[11px] font-medium rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+              className="px-1 py-0.5 text-[11px] font-medium rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
             >
               +1h
             </button>
           </div>
 
           {/* Time & Period Switcher */}
-          <div className="flex items-center justify-between py-2">
+          <div className="flex items-center justify-between py-1.5">
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => setMode("hour")}
-                className={`px-2.5 py-1 rounded-lg text-base font-bold transition-all ${
+                className={`px-2 py-0.5 rounded-md text-sm font-bold transition-all ${
                   mode === "hour"
                     ? "bg-blue-600 text-white shadow-sm ring-2 ring-blue-400/30"
                     : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -319,7 +347,7 @@ export default function TimePicker({
               <button
                 type="button"
                 onClick={() => setMode("minute")}
-                className={`px-2.5 py-1 rounded-lg text-base font-bold transition-all ${
+                className={`px-2 py-0.5 rounded-md text-sm font-bold transition-all ${
                   mode === "minute"
                     ? "bg-blue-600 text-white shadow-sm ring-2 ring-blue-400/30"
                     : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -334,7 +362,7 @@ export default function TimePicker({
               <button
                 type="button"
                 onClick={() => handlePeriodChange(false)}
-                className={`px-2 py-1 rounded-md transition-colors ${
+                className={`px-2 py-0.5 rounded-md transition-colors ${
                   !isPM
                     ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm"
                     : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
@@ -345,7 +373,7 @@ export default function TimePicker({
               <button
                 type="button"
                 onClick={() => handlePeriodChange(true)}
-                className={`px-2 py-1 rounded-md transition-colors ${
+                className={`px-2 py-0.5 rounded-md transition-colors ${
                   isPM
                     ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm"
                     : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
@@ -356,8 +384,8 @@ export default function TimePicker({
             </div>
           </div>
 
-          {/* Circular Clock Wheel (200x200) */}
-          <div className="flex justify-center my-1">
+          {/* Circular Clock Wheel (180x180) */}
+          <div className="flex justify-center my-0.5">
             <div
               ref={clockFaceRef}
               onPointerDown={(e) => {
@@ -383,17 +411,17 @@ export default function TimePicker({
                   }
                 }
               }}
-              className="relative w-[200px] h-[200px] rounded-full bg-gray-50 dark:bg-gray-900/60 border border-gray-200/80 dark:border-gray-700/80 cursor-pointer touch-none"
+              className="relative w-[180px] h-[180px] rounded-full bg-gray-50 dark:bg-gray-900/60 border border-gray-200/80 dark:border-gray-700/80 cursor-pointer touch-none"
             >
               {/* SVG Clock Hand & Indicator */}
               <svg
                 className="absolute inset-0 w-full h-full pointer-events-none"
-                viewBox="0 0 200 200"
+                viewBox="0 0 180 180"
               >
                 {/* Hand Line */}
                 <line
-                  x1="100"
-                  y1="100"
+                  x1="90"
+                  y1="90"
                   x2={handX}
                   y2={handY}
                   stroke="#2563eb"
@@ -401,9 +429,9 @@ export default function TimePicker({
                   strokeLinecap="round"
                 />
                 {/* Center Pivot Dot */}
-                <circle cx="100" cy="100" r="4" fill="#2563eb" />
+                <circle cx="90" cy="90" r="3.5" fill="#2563eb" />
                 {/* Indicator Circle behind selected number */}
-                <circle cx={handX} cy={handY} r="15" fill="#2563eb" />
+                <circle cx={handX} cy={handY} r="13.5" fill="#2563eb" />
               </svg>
 
               {/* Numbers arranged radially */}
@@ -411,8 +439,8 @@ export default function TimePicker({
                 ? hours.map((h) => {
                     const angleDeg = h * 30 - 90;
                     const rad = (angleDeg * Math.PI) / 180;
-                    const x = 100 + CLOCK_RADIUS * Math.cos(rad);
-                    const y = 100 + CLOCK_RADIUS * Math.sin(rad);
+                    const x = 90 + CLOCK_RADIUS * Math.cos(rad);
+                    const y = 90 + CLOCK_RADIUS * Math.sin(rad);
                     const isSelected = selectedHour === h;
 
                     return (
@@ -429,7 +457,7 @@ export default function TimePicker({
                           top: `${y}px`,
                           transform: "translate(-50%, -50%)",
                         }}
-                        className={`absolute w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold select-none z-10 transition-transform hover:scale-110 ${
+                        className={`absolute w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold select-none z-10 transition-transform hover:scale-110 ${
                           isSelected
                             ? "text-white font-bold"
                             : "text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
@@ -442,8 +470,8 @@ export default function TimePicker({
                 : minutes.map((m) => {
                     const angleDeg = (m / 5) * 30 - 90;
                     const rad = (angleDeg * Math.PI) / 180;
-                    const x = 100 + CLOCK_RADIUS * Math.cos(rad);
-                    const y = 100 + CLOCK_RADIUS * Math.sin(rad);
+                    const x = 90 + CLOCK_RADIUS * Math.cos(rad);
+                    const y = 90 + CLOCK_RADIUS * Math.sin(rad);
                     const isSelected = selectedMinute === m;
 
                     return (
@@ -459,7 +487,7 @@ export default function TimePicker({
                           top: `${y}px`,
                           transform: "translate(-50%, -50%)",
                         }}
-                        className={`absolute w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold select-none z-10 transition-transform hover:scale-110 ${
+                        className={`absolute w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold select-none z-10 transition-transform hover:scale-110 ${
                           isSelected
                             ? "text-white font-bold"
                             : "text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
@@ -473,14 +501,14 @@ export default function TimePicker({
           </div>
 
           {/* Footer with Hint and Done */}
-          <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700/80">
-            <span className="text-[11px] text-gray-400 dark:text-gray-500">
-              {mode === "hour" ? "Select hour" : "Select minute"}
+          <div className="flex items-center justify-between pt-1.5 border-t border-gray-100 dark:border-gray-700/80">
+            <span className="text-[10px] text-gray-400 dark:text-gray-500">
+              {mode === "hour" ? "Pick hour" : "Pick min"}
             </span>
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="px-3 py-1 text-xs font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+              className="px-2.5 py-0.5 text-xs font-semibold rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-colors"
             >
               Done
             </button>
