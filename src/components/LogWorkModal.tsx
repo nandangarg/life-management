@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Board, TaskWithRelations, TimeLogWithTask } from "@/types";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { Board, TimeLogWithTask, PRIORITY_COLORS, TaskPriority } from "@/types";
 import TimePicker from "./TimePicker";
 
 interface LogWorkModalProps {
@@ -68,22 +68,74 @@ export default function LogWorkModal({
   const [startTime, setStartTime] = useState(initialLog?.startTime || getNowTimeStr());
   const [endTime, setEndTime] = useState(initialLog?.endTime || getNowTimeStr());
   const [durationMin, setDurationMin] = useState<number>(
-    initialLog?.durationMin || calcDiffMin(initialLog?.startTime || getNowTimeStr(), initialLog?.endTime || getNowTimeStr()) || 30
+    initialLog?.durationMin ||
+      calcDiffMin(
+        initialLog?.startTime || getNowTimeStr(),
+        initialLog?.endTime || getNowTimeStr()
+      ) ||
+      30
   );
   const [notes, setNotes] = useState(initialLog?.notes || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [customTitleMode, setCustomTitleMode] = useState(!initialLog?.taskId);
+
+  // Searchable Task Combobox state
+  const [taskSearchQuery, setTaskSearchQuery] = useState("");
+  const [isTaskDropdownOpen, setIsTaskDropdownOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Selected task object
+  const selectedTask = useMemo(() => {
+    return allTasks.find((t) => t.id === selectedTaskId);
+  }, [allTasks, selectedTaskId]);
+
+  // Filter tasks by typing
+  const filteredTasks = useMemo(() => {
+    if (!taskSearchQuery.trim()) return allTasks;
+    const q = taskSearchQuery.toLowerCase().trim();
+    return allTasks.filter((t) => {
+      return (
+        t.title.toLowerCase().includes(q) ||
+        t.boardName.toLowerCase().includes(q) ||
+        t.categories.some((c) => c.name.toLowerCase().includes(q))
+      );
+    });
+  }, [allTasks, taskSearchQuery]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsTaskDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   if (!isOpen) return null;
 
   const handleTaskSelect = (taskId: string) => {
     setSelectedTaskId(taskId);
+    setIsTaskDropdownOpen(false);
+    setTaskSearchQuery("");
     if (taskId) {
       const task = allTasks.find((t) => t.id === taskId);
       if (task) {
         setTitle(task.title);
       }
     }
+  };
+
+  const handleClearTaskSelection = () => {
+    setSelectedTaskId("");
+    setTaskSearchQuery("");
+    setTimeout(() => {
+      searchInputRef.current?.focus();
+      setIsTaskDropdownOpen(true);
+    }, 50);
   };
 
   const handleStartTimeChange = (val: string) => {
@@ -96,6 +148,39 @@ export default function LogWorkModal({
     setEndTime(val);
     const diff = calcDiffMin(startTime, val);
     setDurationMin(diff > 0 ? diff : 30);
+  };
+
+  // Keyboard navigation inside task combobox
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isTaskDropdownOpen) {
+      if (e.key === "ArrowDown" || e.key === "Enter") {
+        setIsTaskDropdownOpen(true);
+      }
+      return;
+    }
+
+    const totalOptions = filteredTasks.length + 1; // +1 for "Unplanned" option
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev + 1) % totalOptions);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev - 1 + totalOptions) % totalOptions);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (highlightedIndex === 0) {
+        // "Unplanned" option selected
+        if (taskSearchQuery.trim()) {
+          setTitle(taskSearchQuery.trim());
+        }
+        handleTaskSelect("");
+      } else if (filteredTasks[highlightedIndex - 1]) {
+        handleTaskSelect(filteredTasks[highlightedIndex - 1].id);
+      }
+    } else if (e.key === "Escape") {
+      setIsTaskDropdownOpen(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -131,7 +216,7 @@ export default function LogWorkModal({
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-lg border border-gray-100 dark:border-gray-700 space-y-5"
+        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-lg border border-gray-100 dark:border-gray-700 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
@@ -147,44 +232,140 @@ export default function LogWorkModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Link to existing Task or Custom */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
+          {/* ── Searchable Task Combobox ─────────────────────────────────── */}
+          <div className="relative" ref={dropdownRef}>
+            <div className="flex items-center justify-between mb-1.5">
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Link to Task / Board (Optional)
               </label>
-              <button
-                type="button"
-                onClick={() => {
-                  setCustomTitleMode(!customTitleMode);
-                  if (customTitleMode) setSelectedTaskId("");
-                }}
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                {selectedTaskId ? "Clear task association" : "Choose from existing tasks"}
-              </button>
+              {selectedTaskId && (
+                <button
+                  type="button"
+                  onClick={handleClearTaskSelection}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Clear task association
+                </button>
+              )}
             </div>
 
-            <select
-              value={selectedTaskId}
-              onChange={(e) => handleTaskSelect(e.target.value)}
-              className={inputCls}
-            >
-              <option value="">— Unplanned / Ad-hoc activity (No specific task) —</option>
-              {boards.map((board) => {
-                const boardTasks = allTasks.filter((t) => t.boardId === board.id);
-                if (boardTasks.length === 0) return null;
-                return (
-                  <optgroup key={board.id} label={board.name}>
-                    {boardTasks.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.title}
-                      </option>
-                    ))}
-                  </optgroup>
-                );
-              })}
-            </select>
+            {/* Selected Task Pill or Search Input */}
+            {selectedTask ? (
+              <div className="flex items-center justify-between border border-blue-300 dark:border-blue-600 bg-blue-50/60 dark:bg-blue-900/20 rounded-xl px-3.5 py-2.5">
+                <div className="flex items-center gap-2 truncate flex-1 min-w-0">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: selectedTask.boardColor || "#6366f1" }}
+                  />
+                  <span className="font-bold text-sm text-gray-900 dark:text-gray-100 truncate">
+                    {selectedTask.title}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                    ({selectedTask.boardName})
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClearTaskSelection}
+                  className="text-gray-400 hover:text-red-500 text-xs px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ml-2"
+                >
+                  Change ✕
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={taskSearchQuery}
+                  onChange={(e) => {
+                    setTaskSearchQuery(e.target.value);
+                    setIsTaskDropdownOpen(true);
+                    setHighlightedIndex(0);
+                  }}
+                  onFocus={() => setIsTaskDropdownOpen(true)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Type to filter tasks by name, board, or category..."
+                  className={inputCls}
+                />
+                <span className="absolute right-3 top-2.5 text-gray-400 text-xs pointer-events-none">
+                  🔍
+                </span>
+              </div>
+            )}
+
+            {/* Dropdown Menu */}
+            {!selectedTaskId && isTaskDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto z-50 divide-y divide-gray-100 dark:divide-gray-700/60">
+                {/* Option 0: Unplanned / Ad-hoc */}
+                <div
+                  onClick={() => {
+                    if (taskSearchQuery.trim() && !title) {
+                      setTitle(taskSearchQuery.trim());
+                    }
+                    handleTaskSelect("");
+                  }}
+                  className={`px-3.5 py-2.5 text-xs font-semibold cursor-pointer transition-colors ${
+                    highlightedIndex === 0
+                      ? "bg-blue-50 dark:bg-blue-900/40 text-blue-900 dark:text-blue-200"
+                      : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+                  }`}
+                >
+                  {taskSearchQuery.trim() ? (
+                    <span>
+                      ✨ Use &quot;<strong className="text-blue-600 dark:text-blue-400">{taskSearchQuery.trim()}</strong>&quot; as Ad-hoc activity (No specific task)
+                    </span>
+                  ) : (
+                    <span>— Unplanned / Ad-hoc activity (No specific task) —</span>
+                  )}
+                </div>
+
+                {/* Filtered Task Results */}
+                {filteredTasks.length > 0 ? (
+                  <div className="py-1">
+                    {filteredTasks.map((t, idx) => {
+                      const isHighlighted = idx + 1 === highlightedIndex;
+                      return (
+                        <div
+                          key={t.id}
+                          onClick={() => handleTaskSelect(t.id)}
+                          className={`px-3.5 py-2 flex items-center justify-between text-sm cursor-pointer transition-colors ${
+                            isHighlighted
+                              ? "bg-blue-50 dark:bg-blue-900/40 text-blue-900 dark:text-blue-100"
+                              : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 truncate flex-1 min-w-0">
+                            <span
+                              className="w-2 h-2 rounded-full shrink-0"
+                              style={{ backgroundColor: t.boardColor || "#6366f1" }}
+                            />
+                            <span className="font-medium truncate">{t.title}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                              {t.boardName}
+                            </span>
+                            <span
+                              className="text-[10px] font-bold"
+                              style={{
+                                color: PRIORITY_COLORS[t.priority as TaskPriority] || "#6b7280",
+                              }}
+                            >
+                              {t.priority}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-3 text-center text-xs text-gray-400">
+                    No matching tasks found for &quot;{taskSearchQuery}&quot;. You can use it as an ad-hoc title above!
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Activity Title */}
@@ -253,7 +434,9 @@ export default function LogWorkModal({
                 onChange={(e) => setDurationMin(parseInt(e.target.value) || 0)}
                 className="w-20 px-2 py-1 text-right text-sm font-bold bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-800 rounded-lg text-blue-900 dark:text-blue-200 focus:outline-none"
               />
-              <span className="text-xs text-blue-800 dark:text-blue-300 font-semibold">minutes ({Math.floor(durationMin / 60)}h {durationMin % 60}m)</span>
+              <span className="text-xs text-blue-800 dark:text-blue-300 font-semibold">
+                minutes ({Math.floor(durationMin / 60)}h {durationMin % 60}m)
+              </span>
             </div>
           </div>
 
@@ -266,7 +449,7 @@ export default function LogWorkModal({
               rows={3}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Discussed roadmap timelines with Nandangarg, finalized tech spec..."
+              placeholder="e.g. Discussed roadmap timelines, finalized tech spec..."
               className={inputCls}
             />
           </div>
