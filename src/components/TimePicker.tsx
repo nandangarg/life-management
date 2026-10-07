@@ -8,6 +8,7 @@ export interface TimePickerProps {
   className?: string;
   placeholder?: string;
   align?: "left" | "right" | "auto";
+  position?: "top" | "bottom" | "auto";
 }
 
 // Parse various human-entered time strings into 24-hour { hour, min }
@@ -73,6 +74,7 @@ export default function TimePicker({
   className = "",
   placeholder = "e.g. 10:15 AM",
   align = "auto",
+  position = "auto",
 }: TimePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<"hour" | "minute">("hour");
@@ -80,6 +82,7 @@ export default function TimePicker({
   const [typedText, setTypedText] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [resolvedAlign, setResolvedAlign] = useState<"left" | "right">("left");
+  const [resolvedPosition, setResolvedPosition] = useState<"top" | "bottom">("bottom");
 
   const containerRef = useRef<HTMLDivElement>(null);
   const clockFaceRef = useRef<HTMLDivElement>(null);
@@ -100,30 +103,40 @@ export default function TimePicker({
   const selectedMinute = (Math.round(min / 5) * 5) % 60;
   const isPM = hour24 >= 12;
 
-  // Compute alignment on open
+  // Compute alignment & position on open
   useEffect(() => {
     if (!isOpen) return;
 
+    // Horizontal alignment
     if (align === "left") {
       setResolvedAlign("left");
-      return;
-    }
-    if (align === "right") {
+    } else if (align === "right") {
       setResolvedAlign("right");
-      return;
-    }
-
-    // Auto-detect whether dropdown fits to the left or right
-    if (containerRef.current) {
+    } else if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      // If right edge is within 240px of screen right, align right
       if (rect.left + 230 > window.innerWidth || rect.left > window.innerWidth / 2) {
         setResolvedAlign("right");
       } else {
         setResolvedAlign("left");
       }
     }
-  }, [isOpen, align]);
+
+    // Vertical position (top vs bottom)
+    if (position === "top") {
+      setResolvedPosition("top");
+    } else if (position === "bottom") {
+      setResolvedPosition("bottom");
+    } else if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      // If less than 280px below and enough space above, flip to top
+      if (spaceBelow < 280 && rect.top > 260) {
+        setResolvedPosition("top");
+      } else {
+        setResolvedPosition("bottom");
+      }
+    }
+  }, [isOpen, align, position]);
 
   // Handle outside click to close
   useEffect(() => {
@@ -286,7 +299,9 @@ export default function TimePicker({
       {/* Zero-Scroll Hybrid Clock Wheel Dropdown */}
       {isOpen && (
         <div
-          className={`absolute top-full mt-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl p-2.5 z-50 w-[224px] select-none ${
+          className={`absolute ${
+            resolvedPosition === "top" ? "bottom-full mb-1.5" : "top-full mt-1.5"
+          } bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl p-2.5 z-50 w-[224px] select-none ${
             resolvedAlign === "right" ? "right-0" : "left-0"
           }`}
         >

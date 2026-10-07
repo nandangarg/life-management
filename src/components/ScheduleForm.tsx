@@ -377,6 +377,7 @@ export default function ScheduleForm({
                 onChange={(val) => setStartTime(val)}
                 className={inputCls}
                 align="left"
+                position="top"
               />
             </div>
             <div>
@@ -388,6 +389,7 @@ export default function ScheduleForm({
                 onChange={(val) => setEndTime(val)}
                 className={inputCls}
                 align="right"
+                position="top"
               />
             </div>
           </div>

@@ -159,10 +159,27 @@ export default function TaskForm({
   const inputCls = "w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500";
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-xl md:max-w-2xl max-h-[90vh] flex flex-col mx-4" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{task ? "Edit Task" : "New Task"}</h3>
-        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-1 flex-1 pb-20">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div
+        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-xl md:max-w-2xl max-h-[92vh] flex flex-col border border-gray-100 dark:border-gray-700 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700/80 shrink-0">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+            {task ? "Edit Task" : "New Task"}
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-sm p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Form Body - scrollable only if screen is very short or recurrence is opened */}
+        <form id="task-form" onSubmit={handleSubmit} className="px-6 py-4 space-y-3.5 overflow-y-auto flex-1">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title *</label>
             <input
@@ -251,6 +268,7 @@ export default function TaskForm({
                 onChange={(val) => setStartTime(val)}
                 className={inputCls}
                 align="left"
+                position="top"
               />
             </div>
             <div>
@@ -260,6 +278,7 @@ export default function TaskForm({
                 onChange={(val) => setEndTime(val)}
                 className={inputCls}
                 align="right"
+                position="top"
               />
             </div>
           </div>
@@ -371,24 +390,34 @@ export default function TaskForm({
             </div>
           )}
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-              Cancel
-            </button>
-            {!task && onSubmitAndEdit && (
-              <button
-                type="button"
-                onClick={() => { if (title.trim()) onSubmitAndEdit(buildData()); }}
-                className="px-4 py-2 text-sm border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30"
-              >
-                Save & Edit
-              </button>
-            )}
-            <button type="submit" className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              {task ? "Update" : "Save"}
-            </button>
-          </div>
         </form>
+
+        {/* Pinned Modal Footer */}
+        <div className="flex items-center justify-end gap-2.5 px-6 py-3.5 bg-gray-50/50 dark:bg-gray-800/80 border-t border-gray-100 dark:border-gray-700/80 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors"
+          >
+            Cancel
+          </button>
+          {!task && onSubmitAndEdit && (
+            <button
+              type="button"
+              onClick={() => { if (title.trim()) onSubmitAndEdit(buildData()); }}
+              className="px-4 py-2 text-sm font-semibold border border-blue-600 text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+            >
+              Save & Edit
+            </button>
+          )}
+          <button
+            type="submit"
+            form="task-form"
+            className="px-5 py-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm transition-colors"
+          >
+            {task ? "Update" : "Save"}
+          </button>
+        </div>
       </div>
     </div>
   );
