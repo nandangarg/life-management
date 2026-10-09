@@ -549,7 +549,10 @@ function DashboardContent({ initialTab = "tasks" }: DashboardProps) {
                 <TaskTable
                   tasks={activeBoard.tasks}
                   categories={activeBoard.categories}
+                  boardId={activeBoard.id}
+                  boardName={activeBoard.name}
                   onAddTask={handleAddTask}
+                  onImportSuccess={fetchBoards}
                 />
               </Suspense>
             )}

@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import * as XLSX from "xlsx";
 import {
   TaskWithRelations, Category,
   TASK_STATUSES, TASK_PRIORITIES,
   STATUS_LABELS, PRIORITY_COLORS,
   TaskStatus, TaskPriority,
 } from "@/types";
+import ImportTasksModal from "./ImportTasksModal";
 
 type SortKey = "title" | "categories" | "status" | "priority" | "dueDate" | "estimatedMin" | "actions" | "createdAt";
 type SortDir = "asc" | "desc";
@@ -44,7 +46,10 @@ function compare(a: TaskWithRelations, b: TaskWithRelations, key: SortKey): numb
 interface TaskTableProps {
   tasks: TaskWithRelations[];
   categories: Category[];
+  boardId?: string;
+  boardName?: string;
   onAddTask?: () => void;
+  onImportSuccess?: () => void;
 }
 
 interface ThProps {
@@ -71,7 +76,14 @@ function Th({ col, label, className = "", sortKey, sortDir, onSort }: ThProps) {
   );
 }
 
-export default function TaskTable({ tasks, categories, onAddTask }: TaskTableProps) {
+export default function TaskTable({
+  tasks,
+  categories,
+  boardId,
+  boardName,
+  onAddTask,
+  onImportSuccess,
+}: TaskTableProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -83,6 +95,20 @@ export default function TaskTable({ tasks, categories, onAddTask }: TaskTablePro
   const [focus, setFocus] = useState(() => searchParams.get("focus") === "1");
   const [sortKey, setSortKey] = useState<SortKey>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -128,6 +154,34 @@ export default function TaskTable({ tasks, categories, onAddTask }: TaskTablePro
   }
 
   const hasFilters = search || filterCategory || filterStatus || filterPriority || focus;
+
+  const exportTasks = (format: "xlsx" | "csv") => {
+    if (sorted.length === 0) return;
+
+    const data = sorted.map((t) => ({
+      Title: t.title,
+      Description: t.description || "",
+      Categories: t.categories.map((c) => c.name).join(", "),
+      Priority: t.priority,
+      Status: t.status,
+      DueDate: t.dueDate ? t.dueDate.split("T")[0] : "",
+      EstimatedMinutes: t.estimatedMin ?? "",
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Tasks");
+
+    const dateStr = new Date().toISOString().split("T")[0];
+    const safeName = (boardName || "tasks").toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+    const filename = `${safeName}-${dateStr}.${format}`;
+
+    if (format === "xlsx") {
+      XLSX.writeFile(wb, filename);
+    } else {
+      XLSX.writeFile(wb, filename, { bookType: "csv" });
+    }
+  };
 
   const filterInputCls = "border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500";
 
@@ -194,18 +248,72 @@ export default function TaskTable({ tasks, categories, onAddTask }: TaskTablePro
           </button>
         )}
 
-        <span className="text-sm text-gray-400 dark:text-gray-500 ml-auto">
-          {sorted.length} of {tasks.length}
-        </span>
+        <div className="flex items-center gap-2 ml-auto">
+          <span className="text-sm text-gray-400 dark:text-gray-500 mr-1">
+            {sorted.length} of {tasks.length}
+          </span>
 
-        {onAddTask && (
-          <button
-            onClick={onAddTask}
-            className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            + Add Task
-          </button>
-        )}
+          {/* Export dropdown */}
+          <div className="relative" ref={exportMenuRef}>
+            <button
+              type="button"
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              disabled={sorted.length === 0}
+              className="text-sm px-3 py-1.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-650 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 font-medium transition-colors cursor-pointer"
+              title="Export current filtered list"
+            >
+              <span>📤</span> Export
+              <span className="text-[10px]">▼</span>
+            </button>
+            {showExportMenu && (
+              <div className="absolute right-0 mt-1 w-44 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-20 py-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportTasks("xlsx");
+                    setShowExportMenu(false);
+                  }}
+                  className="w-full text-left px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 cursor-pointer text-gray-800 dark:text-gray-200"
+                >
+                  <span>📊</span> Excel (.xlsx)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportTasks("csv");
+                    setShowExportMenu(false);
+                  }}
+                  className="w-full text-left px-3.5 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 cursor-pointer text-gray-800 dark:text-gray-200"
+                >
+                  <span>📄</span> CSV (.csv)
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Import button */}
+          {boardId && (
+            <button
+              type="button"
+              onClick={() => setShowImportModal(true)}
+              className="text-sm px-3 py-1.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-650 flex items-center gap-1.5 font-medium transition-colors cursor-pointer"
+              title="Import tasks from Excel or CSV"
+            >
+              <span>📥</span> Import
+            </button>
+          )}
+
+          {/* Add Task button */}
+          {onAddTask && (
+            <button
+              type="button"
+              onClick={onAddTask}
+              className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium cursor-pointer"
+            >
+              + Add Task
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Table */}
@@ -291,6 +399,17 @@ export default function TaskTable({ tasks, categories, onAddTask }: TaskTablePro
           </table>
         )}
       </div>
+
+      {boardId && (
+        <ImportTasksModal
+          isOpen={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          boardId={boardId}
+          boardName={boardName}
+          categories={categories}
+          onSuccess={() => onImportSuccess?.()}
+        />
+      )}
     </div>
   );
 }
