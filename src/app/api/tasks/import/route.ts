@@ -11,6 +11,7 @@ interface ImportTaskItem {
   status?: string | null;
   dueDate?: string | null;
   estimatedMin?: number | null;
+  lastUpdate?: string | null;
 }
 
 export async function POST(request: NextRequest) {
@@ -146,6 +147,15 @@ export async function POST(request: NextRequest) {
                 categoryId,
               })),
             },
+            ...(item.lastUpdate?.trim()
+              ? {
+                  comments: {
+                    create: {
+                      text: item.lastUpdate.trim(),
+                    },
+                  },
+                }
+              : {}),
           },
         });
 

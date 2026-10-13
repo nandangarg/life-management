@@ -19,6 +19,7 @@ export async function GET() {
           categories: { include: { category: true }, orderBy: { category: { position: "asc" } } },
           schedules: true,
           actions: { orderBy: { position: "asc" } },
+          comments: { orderBy: { createdAt: "asc" } },
         },
         orderBy: { position: "asc" },
       },

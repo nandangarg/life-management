@@ -98,6 +98,7 @@ export interface TaskWithRelations extends Task {
   categories: Category[];
   schedules: TaskSchedule[];
   actions: TaskAction[];
+  comments?: TaskComment[];
 }
 
 export interface TaskDetail extends TaskWithRelations {

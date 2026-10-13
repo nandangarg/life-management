@@ -21,6 +21,7 @@ interface ParsedTask {
   status?: string;
   dueDate?: string;
   estimatedMin?: number;
+  lastUpdate?: string;
 }
 
 export default function ImportTasksModal({
@@ -60,6 +61,7 @@ export default function ImportTasksModal({
         Status: "TODO",
         DueDate: new Date().toISOString().split("T")[0],
         EstimatedMinutes: 60,
+        "Last Update": "Discussed roadmap with stakeholders; ready for kickoff",
       },
       {
         Title: "Team sync and status update",
@@ -69,6 +71,7 @@ export default function ImportTasksModal({
         Status: "TODO",
         DueDate: "",
         EstimatedMinutes: 30,
+        "Last Update": "",
       },
     ];
 
@@ -190,6 +193,16 @@ export default function ImportTasksModal({
             }
           }
 
+          // Parse Last Update / Comment
+          const rawUpdate =
+            normalizedRow["last update"] ??
+            normalizedRow["lastupdate"] ??
+            normalizedRow["comment"] ??
+            normalizedRow["comments"] ??
+            normalizedRow["update"] ??
+            normalizedRow["latest comment"];
+          const lastUpdate = rawUpdate ? String(rawUpdate).trim() : undefined;
+
           validTasks.push({
             title,
             description,
@@ -198,6 +211,7 @@ export default function ImportTasksModal({
             status,
             dueDate: dueDateStr,
             estimatedMin,
+            lastUpdate,
           });
         }
 
@@ -438,17 +452,19 @@ export default function ImportTasksModal({
                       <th className="px-3 py-2">Categories</th>
                       <th className="px-3 py-2">Priority</th>
                       <th className="px-3 py-2">Due Date</th>
+                      <th className="px-3 py-2">Last Update</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
                     {parsedTasks.slice(0, 5).map((t, idx) => (
                       <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/50">
-                        <td className="px-3 py-1.5 font-medium max-w-[200px] truncate">{t.title}</td>
-                        <td className="px-3 py-1.5 text-gray-500 max-w-[150px] truncate">
+                        <td className="px-3 py-1.5 font-medium max-w-[180px] truncate">{t.title}</td>
+                        <td className="px-3 py-1.5 text-gray-500 max-w-[120px] truncate">
                           {t.categories || (selectedCategoryIds.length > 0 ? "From selection" : "—")}
                         </td>
                         <td className="px-3 py-1.5">{t.priority || "MEDIUM"}</td>
                         <td className="px-3 py-1.5">{t.dueDate || "—"}</td>
+                        <td className="px-3 py-1.5 text-gray-500 max-w-[160px] truncate">{t.lastUpdate || "—"}</td>
                       </tr>
                     ))}
                   </tbody>

@@ -158,15 +158,22 @@ export default function TaskTable({
   const exportTasks = (format: "xlsx" | "csv") => {
     if (sorted.length === 0) return;
 
-    const data = sorted.map((t) => ({
-      Title: t.title,
-      Description: t.description || "",
-      Categories: t.categories.map((c) => c.name).join(", "),
-      Priority: t.priority,
-      Status: t.status,
-      DueDate: t.dueDate ? t.dueDate.split("T")[0] : "",
-      EstimatedMinutes: t.estimatedMin ?? "",
-    }));
+    const data = sorted.map((t) => {
+      const lastComment = t.comments && t.comments.length > 0
+        ? t.comments[t.comments.length - 1].text
+        : "";
+
+      return {
+        Title: t.title,
+        Description: t.description || "",
+        Categories: t.categories.map((c) => c.name).join(", "),
+        Priority: t.priority,
+        Status: t.status,
+        DueDate: t.dueDate ? t.dueDate.split("T")[0] : "",
+        EstimatedMinutes: t.estimatedMin ?? "",
+        "Last Update": lastComment,
+      };
+    });
 
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
