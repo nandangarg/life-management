@@ -127,7 +127,7 @@ export default function ChangeBoardModal({
           )}
 
           {/* Current Board & Categories Info */}
-          <div className="bg-gray-50 dark:bg-gray-750/50 rounded-xl p-3.5 border border-gray-200/80 dark:border-gray-700">
+          <div className="bg-gray-50 dark:bg-gray-900/60 rounded-xl p-3.5 border border-gray-200 dark:border-gray-700">
             <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">
               Current Location
             </div>
@@ -141,12 +141,12 @@ export default function ChangeBoardModal({
               </span>
             </div>
             {currentCategories.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-gray-200/60 dark:border-gray-700/60">
-                <span className="text-xs text-gray-400 self-center mr-1">Categories:</span>
+              <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2.5 border-t border-gray-200 dark:border-gray-700/80">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 self-center mr-1">Categories:</span>
                 {currentCategories.map((c) => (
                   <span
                     key={c.id}
-                    className="text-xs px-2 py-0.5 rounded-full text-white"
+                    className="text-xs px-2 py-0.5 rounded-full text-white font-medium"
                     style={{ backgroundColor: c.color }}
                   >
                     {c.name}
@@ -154,7 +154,7 @@ export default function ChangeBoardModal({
                 ))}
               </div>
             ) : (
-              <div className="text-xs text-gray-400 mt-1">No categories assigned</div>
+              <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">No categories assigned</div>
             )}
           </div>
 
