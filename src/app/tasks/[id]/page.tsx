@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import TimePicker from "@/components/TimePicker";
+import ChangeBoardModal from "@/components/ChangeBoardModal";
 import {
   TaskDetail, TaskAction, TaskComment,
   TASK_STATUSES, TASK_PRIORITIES, STATUS_LABELS, PRIORITY_COLORS,
@@ -28,6 +29,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentText, setEditingCommentText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showChangeBoardModal, setShowChangeBoardModal] = useState(false);
 
   const titleInputRef = useRef<HTMLInputElement>(null);
   const descInputRef = useRef<HTMLTextAreaElement>(null);
@@ -590,10 +592,19 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
 
               {/* Board */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Board</label>
-                <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Board</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowChangeBoardModal(true)}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    Change Board
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600">
                   <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: task.board.color }} />
-                  {task.board.name}
+                  <span className="font-medium text-gray-800 dark:text-gray-200">{task.board.name}</span>
                 </div>
               </div>
 
@@ -824,6 +835,18 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
           </div>
         </div>
       </main>
+
+      {showChangeBoardModal && (
+        <ChangeBoardModal
+          isOpen={showChangeBoardModal}
+          onClose={() => setShowChangeBoardModal(false)}
+          currentBoard={task.board}
+          currentCategories={task.categories}
+          onConfirm={async (targetBoardId, categoryIds) => {
+            await patchTask({ boardId: targetBoardId, categoryIds });
+          }}
+        />
+      )}
     </div>
   );
 }

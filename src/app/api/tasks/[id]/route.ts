@@ -55,7 +55,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (body.estimatedMin !== undefined) data.estimatedMin = body.estimatedMin;
   if (body.dueDate !== undefined) data.dueDate = body.dueDate ? new Date(body.dueDate) : null;
   if (body.position !== undefined) data.position = body.position;
-  if (body.boardId !== undefined) data.boardId = body.boardId;
+  if (body.boardId !== undefined) {
+    const targetBoard = await prisma.board.findFirst({
+      where: { id: body.boardId, userId },
+    });
+    if (!targetBoard) {
+      return NextResponse.json({ error: "Target board not found" }, { status: 400 });
+    }
+    data.boardId = body.boardId;
+  }
   if (body.tags !== undefined) data.tags = body.tags;
   if (body.startTime !== undefined) data.startTime = body.startTime;
   if (body.endTime !== undefined) data.endTime = body.endTime;
@@ -67,13 +75,24 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   // Handle many-to-many category update: replace all existing entries
   if (body.categoryIds !== undefined) {
+    const targetBoardId = (body.boardId ?? existing.boardId) as string;
     const categoryIds: string[] = body.categoryIds ?? [];
     await prisma.taskCategory.deleteMany({ where: { taskId: id } });
     if (categoryIds.length > 0) {
-      await prisma.taskCategory.createMany({
-        data: categoryIds.map((categoryId) => ({ taskId: id, categoryId })),
+      // Ensure only categories belonging to the target board are attached
+      const validCategories = await prisma.category.findMany({
+        where: { id: { in: categoryIds }, boardId: targetBoardId },
+        select: { id: true },
       });
+      if (validCategories.length > 0) {
+        await prisma.taskCategory.createMany({
+          data: validCategories.map((c) => ({ taskId: id, categoryId: c.id })),
+        });
+      }
     }
+  } else if (body.boardId !== undefined && body.boardId !== existing.boardId) {
+    // If board changed but categoryIds wasn't specified, clear categories from old board
+    await prisma.taskCategory.deleteMany({ where: { taskId: id } });
   }
 
   try {
